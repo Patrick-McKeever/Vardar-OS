@@ -32,4 +32,4 @@ GLOBAL LoadIdt
 ; @input rdi The address of the IDT.
 LoadIdt:
 	lidt [rdi]
-	retfq
+	ret
