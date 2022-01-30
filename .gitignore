@@ -1,0 +1,7 @@
+limine/*
+*.o
+*.elf
+*.img
+*.iso
+*.bin
+*.pdf
