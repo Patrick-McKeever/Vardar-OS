@@ -20,8 +20,9 @@
 #define ICW4_X86 				0x01
 
 // Flags for 64-bit gate types.
-#define INTERRUPT_GATE			0xE
-#define TRAP_GATE				0xF
+#define INTERRUPT_GATE			0x8E
+#define TRAP_GATE				0x8F
+#define TASK_GATE				0x85
 
 
 // IDT entry.
@@ -50,7 +51,7 @@ typedef struct {
 
 
 // The ISR1 handler defined in the asm file.
-extern uint64_t isr1;
+extern void 	isr1();
 // Loads the IDT referenced by given IDT descriptor as the IDT. 
 extern void 	LoadIdt(uint64_t idtr);
 extern uint8_t	volatile KEYSTROKE;

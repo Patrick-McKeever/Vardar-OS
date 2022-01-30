@@ -9,6 +9,7 @@ CFLAGS := 				 	\
 	-ffreestanding       	\
 	-fno-stack-protector 	\
 	-fno-pic             	\
+	-m64					\
 	-mno-80387           	\
 	-mno-mmx             	\
 	-mno-3dnow           	\
@@ -51,7 +52,7 @@ run:
         -efi-boot-part --efi-boot-image --protective-msdos-label \
         iso_root -o bin/image.iso
 	../limine/limine-install bin/image.iso
-	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -d int -D ./log.txt
+	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -d int -M smm=off -D ./log.txt
 
 
 clean:

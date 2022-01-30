@@ -110,12 +110,14 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 //#include "kernel/interrupts/idt.h"
 #include "interrupts/idt.h"
 
+struct stivale2_struct_tag_terminal *term_str_tag_g;
 
 // The following will be our kernel's entry point.
 void _start(struct stivale2_struct *stivale2_struct) {
 	// Let's get the terminal structure tag from the bootloader.
 	static struct stivale2_struct_tag_terminal *term_str_tag;
 	term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+	term_str_tag_g = term_str_tag;
     // Check if the tag was actually found.
     if (term_str_tag == NULL) {
         // It wasn't found, just hang...

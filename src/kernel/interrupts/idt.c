@@ -1,14 +1,26 @@
 #include "idt.h"
-
+#include "../utils/misc.h"
+#include "../stivale2.h"
 volatile uint8_t KEYSTROKE;
 
 static IdtEntry IDT[256];
-
+extern struct stivale2_struct_tag_terminal *term_str_tag_g;
 void InitializeIdt() 
 {
 	//SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
 	// Keyboard input is IRQ 1 + 0x20 offset = 0x21.
 	SetIdtEntry(0x21, (void*) isr1, INTERRUPT_GATE);
+	
+	void *term_write_ptr = (void*)term_str_tag_g->term_write;
+	void (*term_write)(const char *string, int length) = term_write_ptr;
+	//char first[128];
+	//uint64_t idt_entry = *((uint64_t*) &IDT[0x21]);
+	//Itoa(idt_entry, first);
+	//term_write(first, 128);
+	//char second[128];
+	//uint64_t idt_entry_second = *((uint64_t*) &IDT[0x21] + 1);
+	//Itoa(idt_entry_second, second);
+	//term_write(second, 128);
 	
 	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
 	// hardware interrupts. This conflicts with IRQs, which occupy part of the
@@ -26,7 +38,7 @@ void InitializeIdt()
 
 	IdtDescriptor idt_desc = {
 		.bounds = 256 * sizeof(IdtEntry) - 1,
-		.base	= (uint64_t) IDT 
+		.base	= (uint64_t) IDT
 	};
 	LoadIdt((uint64_t) &idt_desc);
 }
