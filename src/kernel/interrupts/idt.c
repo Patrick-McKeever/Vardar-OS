@@ -1,14 +1,25 @@
 #include "idt.h"
 
-uint8_t KEYSTROKE;
+volatile uint8_t KEYSTROKE;
 
 static IdtEntry IDT[256];
 
 void InitializeIdt() 
 {
-	SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
-	RemapPic(0, 8);
-	// Ignore all but keyboard interrupts for now.
+	//SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
+	// Keyboard input is IRQ 1 + 0x20 offset = 0x21.
+	SetIdtEntry(0x21, (void*) isr1, INTERRUPT_GATE);
+	
+	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
+	// hardware interrupts. This conflicts with IRQs, which occupy part of the
+	// same range (specifically [0x0,0xF]). To resolve this conflicts, PICs
+	// add a small "vector offset" to IRQ values before mapping them to ISRs.
+	// We'll map IRQs [0x0,0xF] to [0x20,0x2F], which requires the master PIC
+	// (responsible for [0x0,0x7]) to have a vector offset of 0x20 and the
+	// slave (responsible for [0x8,0xF]) to have an offset of 0x28.
+	RemapPic(0x20, 0x28);
+
+	// Ignore all but keyboard interrupts (IRQ 0x1) for now.
 	outportb(MASTER_PIC_DATA, 0xfd);
 	outportb(SLAVE_PIC_DATA,  0xff);
 	
@@ -67,15 +78,12 @@ void RemapPic(int master_offset, int slave_offset)
 	outportb(MASTER_PIC_DATA, master_int_mask);
 	outportb(SLAVE_PIC_DATA, slave_int_mask);
 }
-#include "../stivale2.h"
 
-// Let's get the terminal structure tag from the bootloader.
 void Isr1Handler()
 {
 	// Read byte from keyboard.
 	KEYSTROKE = inportb(0x60);
 	// Tell PIC to resume interrupts now that we've handled this one.
 	outportb(MASTER_PIC_COMMAND, 0x20);
-	outportb(SLAVE_PIC_COMMAND,  0x20);
 }
 

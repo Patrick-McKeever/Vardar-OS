@@ -53,7 +53,7 @@ typedef struct {
 extern uint64_t isr1;
 // Loads the IDT referenced by given IDT descriptor as the IDT. 
 extern void 	LoadIdt(uint64_t idtr);
-extern uint8_t	KEYSTROKE;
+extern uint8_t	volatile KEYSTROKE;
 
 /**
  * Set relevant IDT entries. At this point in time, we're only concerned with

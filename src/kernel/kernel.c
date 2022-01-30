@@ -134,8 +134,10 @@ void _start(struct stivale2_struct *stivale2_struct) {
 		
 	InitializeIdt();	
 	while(1) {
-		if(KEYSTROKE != 0)	
+		if(KEYSTROKE != 0) {
 			term_write("Hello World!", 12);
+			while(1) {}
+		}
 	}
 
 	struct stivale2_struct_tag_framebuffer *fb;

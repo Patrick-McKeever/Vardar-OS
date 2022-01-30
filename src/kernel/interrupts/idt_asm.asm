@@ -32,4 +32,5 @@ GLOBAL LoadIdt
 ; @input rdi The address of the IDT.
 LoadIdt:
 	lidt [rdi]
+	sti	
 	ret
