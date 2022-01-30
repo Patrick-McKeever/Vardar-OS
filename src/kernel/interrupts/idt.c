@@ -67,7 +67,9 @@ void RemapPic(int master_offset, int slave_offset)
 	outportb(MASTER_PIC_DATA, master_int_mask);
 	outportb(SLAVE_PIC_DATA, slave_int_mask);
 }
+#include "../stivale2.h"
 
+// Let's get the terminal structure tag from the bootloader.
 void Isr1Handler()
 {
 	// Read byte from keyboard.

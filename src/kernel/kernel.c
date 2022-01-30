@@ -109,12 +109,13 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 
 //#include "kernel/interrupts/idt.h"
 #include "interrupts/idt.h"
+
+
 // The following will be our kernel's entry point.
 void _start(struct stivale2_struct *stivale2_struct) {
-    // Let's get the terminal structure tag from the bootloader.
-    struct stivale2_struct_tag_terminal *term_str_tag;
-    term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
- 
+	// Let's get the terminal structure tag from the bootloader.
+	static struct stivale2_struct_tag_terminal *term_str_tag;
+	term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
     // Check if the tag was actually found.
     if (term_str_tag == NULL) {
         // It wasn't found, just hang...
@@ -130,9 +131,13 @@ void _start(struct stivale2_struct *stivale2_struct) {
     // matches the prototype described in the stivale2 specification for
     // the stivale2_term_write function.
     void (*term_write)(const char *string, size_t length) = term_write_ptr;
-	
-    term_write("Hello World!", 12);
+		
 	InitializeIdt();	
+	while(1) {
+		if(KEYSTROKE != 0)	
+			term_write("Hello World!", 12);
+	}
+
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 	for(uint64_t i = 0; i < fb->framebuffer_width * fb->framebuffer_height; ++i) {
