@@ -109,7 +109,7 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 
 //#include "kernel/interrupts/idt.h"
 #include "interrupts/idt.h"
-
+#include "graphics/graphics_ctx.h"
 struct stivale2_struct_tag_terminal *term_str_tag_g;
 
 // The following will be our kernel's entry point.
@@ -134,19 +134,31 @@ void _start(struct stivale2_struct *stivale2_struct) {
     // the stivale2_term_write function.
     void (*term_write)(const char *string, size_t length) = term_write_ptr;
 		
-	InitializeIdt();	
-	while(1) {
-		if(KEYSTROKE != 0) {
-			term_write("Hello World!", 12);
-			while(1) {}
-		}
-	}
+	//InitializeIdt();	
+	//while(1) {
+	//	if(KEYSTROKE != 0) {
+	//		term_write("Hello World!", 12);
+	//	}
+	//	KEYSTROKE = 0;
+	//}
+	
+
 
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
-	for(uint64_t i = 0; i < fb->framebuffer_width * fb->framebuffer_height; ++i) {
-		*((uint32_t*) fb->framebuffer_addr + i) = 0xFFFFFFFF;
-	}
+	//for(uint64_t i = 0; i < fb->framebuffer_width * fb->framebuffer_height; ++i) {
+	//	*((uint32_t*) fb->framebuffer_addr + i) = 0xFFFFFFFF;
+	//}
+
+	GraphicsCtx ctx = InitGraphicsCtx(fb);
+	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
+	
+	//char prompt[] = "patrick@VardarOS:~$";
+	font_obj.rgb = (RGB) {255, 0, 0};
+	char success[] = "SUCCESS";
+	PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
+	WriteBack(&ctx);
+
 	//for(uint64_t i = 0; i < 0xffffffffffffffff; ++i) {
 	//	*((uint32_t*) framebuffer.framebuffer_addr + i) = 0xFFFFFFFF;	
 	//} 
