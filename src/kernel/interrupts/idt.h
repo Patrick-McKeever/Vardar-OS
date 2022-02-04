@@ -2,6 +2,7 @@
 #define IDT_H
 
 #include "io.h"
+#include "key_input.h"
 
 // Calculating offset of ISR from void ptr.
 #define LOW_ISR_OFFSET(isr)		(uint64_t) 	isr 		& 0xFFFF
@@ -54,7 +55,7 @@ typedef struct {
 extern void 	isr1();
 // Loads the IDT referenced by given IDT descriptor as the IDT. 
 extern void 	LoadIdt(uint64_t idtr);
-extern uint8_t	volatile KEYSTROKE;
+extern uint8_t	volatile SCANCODE;
 
 /**
  * Set relevant IDT entries. At this point in time, we're only concerned with

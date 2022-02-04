@@ -111,58 +111,42 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 #include "interrupts/idt.h"
 #include "graphics/graphics_ctx.h"
 struct stivale2_struct_tag_terminal *term_str_tag_g;
+#include "interrupts/keycodes.h"
+
+GraphicsCtx *global_ctx;
+int global_x;
+Font *global_font;
 
 // The following will be our kernel's entry point.
 void _start(struct stivale2_struct *stivale2_struct) {
-	// Let's get the terminal structure tag from the bootloader.
 	static struct stivale2_struct_tag_terminal *term_str_tag;
 	term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
 	term_str_tag_g = term_str_tag;
-    // Check if the tag was actually found.
-    if (term_str_tag == NULL) {
-        // It wasn't found, just hang...
-        for (;;) {
-            asm ("hlt");
-        }
-    }
- 
-    // Let's get the address of the terminal write function.
     void *term_write_ptr = (void *)term_str_tag->term_write;
-	//InitializeIdt(); 
-    // Now, let's assign this pointer to a function pointer which
-    // matches the prototype described in the stivale2 specification for
-    // the stivale2_term_write function.
     void (*term_write)(const char *string, size_t length) = term_write_ptr;
-		
-	//InitializeIdt();	
-	//while(1) {
-	//	if(KEYSTROKE != 0) {
-	//		term_write("Hello World!", 12);
-	//	}
-	//	KEYSTROKE = 0;
-	//}
-	
 
 
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
-	//for(uint64_t i = 0; i < fb->framebuffer_width * fb->framebuffer_height; ++i) {
-	//	*((uint32_t*) fb->framebuffer_addr + i) = 0xFFFFFFFF;
-	//}
-
-	GraphicsCtx ctx = InitGraphicsCtx(fb);
+	InitializeIdt();	
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
+	GraphicsCtx ctx = InitGraphicsCtx(fb);
+	global_ctx = &ctx;	
+	global_x = 0;
+	global_font = &font_obj;
+	//int x = 0;
+	//char c;
+	//while(1) {
+	//	if(SCANCODE != 0 && SCANCODE < 0x3A) {
+	//		c = CharFromScancode(SCANCODE);
+	//		PrintStr(&ctx, &font_obj, (Coordinate) {x, 0}, &c);
+	//		x += font_obj.width;
+	//		WriteBack(&ctx);
+	//	}
+	//	SCANCODE = 0;
+	//}
 	
-	//char prompt[] = "patrick@VardarOS:~$";
-	font_obj.rgb = (RGB) {255, 0, 0};
-	char success[] = "SUCCESS";
-	PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
-	WriteBack(&ctx);
 
-	//for(uint64_t i = 0; i < 0xffffffffffffffff; ++i) {
-	//	*((uint32_t*) framebuffer.framebuffer_addr + i) = 0xFFFFFFFF;	
-	//} 
-    // We're done, just hang...
     for (;;) {
         asm ("hlt");
     }

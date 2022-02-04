@@ -1,27 +1,16 @@
 #include "idt.h"
 #include "../utils/misc.h"
 #include "../stivale2.h"
-volatile uint8_t KEYSTROKE;
+volatile uint8_t SCANCODE;
 
 static IdtEntry IDT[256];
-extern struct stivale2_struct_tag_terminal *term_str_tag_g;
+
 void InitializeIdt() 
 {
 	//SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
 	// Keyboard input is IRQ 1 + 0x20 offset = 0x21.
 	SetIdtEntry(0x21, (void*) isr1, INTERRUPT_GATE);
-	
-	void *term_write_ptr = (void*)term_str_tag_g->term_write;
-	void (*term_write)(const char *string, int length) = term_write_ptr;
-	//char first[128];
-	//uint64_t idt_entry = *((uint64_t*) &IDT[0x21]);
-	//Itoa(idt_entry, first);
-	//term_write(first, 128);
-	//char second[128];
-	//uint64_t idt_entry_second = *((uint64_t*) &IDT[0x21] + 1);
-	//Itoa(idt_entry_second, second);
-	//term_write(second, 128);
-	
+		
 	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
 	// hardware interrupts. This conflicts with IRQs, which occupy part of the
 	// same range (specifically [0x0,0xF]). To resolve this conflicts, PICs
@@ -91,10 +80,58 @@ void RemapPic(int master_offset, int slave_offset)
 	outportb(SLAVE_PIC_DATA, slave_int_mask);
 }
 
+
+#include "../graphics/font.h"
+#include "../graphics/graphics_ctx.h"
+#include "keycodes.h"
+#include <stdbool.h>
+
+static KeyInfo KEY_INFO;
+
+extern GraphicsCtx *global_ctx;
+extern int global_x;
+extern Font *global_font;
 void Isr1Handler()
 {
 	// Read byte from keyboard.
-	KEYSTROKE = inportb(0x60);
+	KEY_INFO.scancode = inportb(0x60);
+	switch(KEY_INFO.scancode) {
+		case BACKSPACE_PRESSED:
+			KEY_INFO.backspace = true;
+			break;
+
+		case BACKSPACE_RELEASED:
+			KEY_INFO.backspace = false;
+			break;
+		
+		case LEFT_SHIFT_PRESSED:
+		case RIGHT_SHIFT_PRESSED:
+			KEY_INFO.shift = true;
+			break;
+
+		case LEFT_SHIFT_RELEASED:
+		case RIGHT_SHIFT_RELEASED:
+			KEY_INFO.shift = false;
+			break;
+		
+		case CTRL_PRESSED:
+			KEY_INFO.ctrl = true;
+			break;
+
+		case CTRL_RELEASED:
+			KEY_INFO.ctrl = false;
+			break;
+	}
+	
+	KeystrokeConsumer key_consumer = GetKeystrokeConsumer();
+	key_consumer(&KEY_INFO);
+	char c = CharFromScancode(&KEY_INFO);
+	DrawChar(global_ctx, global_font, (Coordinate) {global_x, 0}, c);
+	WriteBack(global_ctx);
+	// Update these vals later.
+	if((c <= 122 && c >= 97) || c == ' ')	
+		global_x += global_font->width;
+
 	// Tell PIC to resume interrupts now that we've handled this one.
 	outportb(MASTER_PIC_COMMAND, 0x20);
 }

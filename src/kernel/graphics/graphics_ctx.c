@@ -83,21 +83,25 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
 void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 {
 	const uint8_t *char_bmp = font->matrix[(int) c];
-	uint32_t packed_rgb = 0xFFFFFFFF/*PackRgb(font->rgb, ctx->fb)*/;
+	uint32_t packed_rgb = PackRgb(font->rgb, ctx->fb),
+			 back = PackRgb((RGB) {0,0,0}, ctx->fb);
 	
 	for(int j = 0; j < font->height; ++j) {
 		const uint8_t row = char_bmp[j];
 		for(int i = 0; i < font->width; ++i) {
+			int index = coords.x + i + 
+						(coords.y + j) * ctx->fb->framebuffer_width;
 			if(GetNthBit(row, i)) {
-				int index = coords.x + i + 
-							(coords.y + j) * ctx->fb->framebuffer_width;
 				*((uint32_t*) ctx->buffer + index) = packed_rgb;
+			} else {						
+				*((uint32_t*) ctx->buffer + index) = back;
 			}
 		}
 	}
 	
 	int starting_row = coords.y / ctx->row_height;
 	int ending_row = (coords.y + font->height) / ctx->row_height;
+	ending_row += 1 * (((coords.y + font->height) % ctx->row_height) > 0);
 	for(int i = starting_row; i < ending_row; ++i) {
 		SetNthBit(&ctx->dirty_block_str, i);
 	}

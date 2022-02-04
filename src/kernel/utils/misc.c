@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <limits.h>
 #include "misc.h"
 
 void SetNthBit(uint64_t *num, uint16_t n)
@@ -34,7 +35,7 @@ int GetNthBit(uint64_t num, uint16_t n)
 //{
 //	return num + (DMod(num, 1) != 0);
 //}
-
+//
 //double DMod(double x, double y) {
 //	return x - (int)(x/y) * y;
 //}

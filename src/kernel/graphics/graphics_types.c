@@ -3,7 +3,7 @@
 uint32_t PackRgb(RGB rgb, struct stivale2_struct_tag_framebuffer *fb)
 {
 	// This function assumes 32 bpp with packed pixels (memory model of 0x04).
-	if(fb->framebuffer_bpp != 32 || fb->memory_model != 0x04) {
+	if(fb->framebuffer_bpp != 32/* || fb->memory_model != 0x04*/) {
 		return 0;
 	}
 
