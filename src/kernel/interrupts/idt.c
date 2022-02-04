@@ -1,9 +1,9 @@
 #include "idt.h"
-#include "../utils/misc.h"
-#include "../stivale2.h"
-volatile uint8_t SCANCODE;
+#include "keycodes.h"
+#include <stdbool.h>
 
 static IdtEntry IDT[256];
+static volatile KeyInfo KEY_INFO;
 
 void InitializeIdt() 
 {
@@ -81,16 +81,6 @@ void RemapPic(int master_offset, int slave_offset)
 }
 
 
-#include "../graphics/font.h"
-#include "../graphics/graphics_ctx.h"
-#include "keycodes.h"
-#include <stdbool.h>
-
-static KeyInfo KEY_INFO;
-
-extern GraphicsCtx *global_ctx;
-extern int global_x;
-extern Font *global_font;
 void Isr1Handler()
 {
 	// Read byte from keyboard.
@@ -123,14 +113,8 @@ void Isr1Handler()
 			break;
 	}
 	
-	KeystrokeConsumer key_consumer = GetKeystrokeConsumer();
-	key_consumer(&KEY_INFO);
-	char c = CharFromScancode(&KEY_INFO);
-	DrawChar(global_ctx, global_font, (Coordinate) {global_x, 0}, c);
-	WriteBack(global_ctx);
-	// Update these vals later.
-	if((c <= 122 && c >= 97) || c == ' ')	
-		global_x += global_font->width;
+	KeystrokeConsumer ks_consumer = GetKeystrokeConsumer();
+	ks_consumer(&KEY_INFO);
 
 	// Tell PIC to resume interrupts now that we've handled this one.
 	outportb(MASTER_PIC_COMMAND, 0x20);

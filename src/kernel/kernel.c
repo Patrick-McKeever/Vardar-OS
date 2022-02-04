@@ -82,7 +82,6 @@ static struct stivale2_header stivale_hdr = {
     // This header structure is the root of the linked list of header tags and
     // points to the first one in the linked list.
     .tags = (uintptr_t)&framebuffer
-	//.tags = (uintptr_t)&framebuffer_hdr_tag
 };
  
 // We will now write a helper function which will allow us to scan for tags
@@ -113,27 +112,49 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 struct stivale2_struct_tag_terminal *term_str_tag_g;
 #include "interrupts/keycodes.h"
 
-GraphicsCtx *global_ctx;
-int global_x;
-Font *global_font;
 
+//static Font *font_obj;
+//static GraphicsCtx *ctx;
+//
+//void WriteToTty(KeyInfo *key_info)
+//{
+//	char c = CharFromScancode(key_info);
+//	DrawChar(&ctx, &font_obj, (Coordinate) {0,0}, c);
+//	WriteBack(&ctx);
+//}
+
+//struct stivale_2_struct_tag_framebuffer *global_fb;
 // The following will be our kernel's entry point.
 void _start(struct stivale2_struct *stivale2_struct) {
-	static struct stivale2_struct_tag_terminal *term_str_tag;
-	term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
-	term_str_tag_g = term_str_tag;
-    void *term_write_ptr = (void *)term_str_tag->term_write;
-    void (*term_write)(const char *string, size_t length) = term_write_ptr;
-
-
+	//static struct stivale2_struct_tag_terminal *term_str_tag;
+	//term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+	//term_str_tag_g = term_str_tag;
+    //void *term_write_ptr = (void *)term_str_tag->term_write;
+    //void (*term_write)(const char *string, size_t length) = term_write_ptr;
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
-	InitializeIdt();	
-	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
+	//global_fb = &fb;
+
 	GraphicsCtx ctx = InitGraphicsCtx(fb);
-	global_ctx = &ctx;	
-	global_x = 0;
-	global_font = &font_obj;
+	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
+
+	font_obj.rgb = (RGB) {255, 0, 0};
+	char success[] = "SUCCESS";
+	PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
+	WriteBack(&ctx);
+	
+	//struct stivale2_struct_tag_framebuffer *fb;
+	//fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
+	//InitializeIdt();	
+	////Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
+	////GraphicsCtx ctx = InitGraphicsCtx(fb);
+	//KeystrokeConsumer ksc = &WriteToTty;
+	////
+	////DrawChar(&ctx, &font_obj, (Coordinate) {100,20}, 'j');
+	////WriteBack(&ctx);
+	//
+	//SetKeystrokeConsumer(ksc);
+
 	//int x = 0;
 	//char c;
 	//while(1) {

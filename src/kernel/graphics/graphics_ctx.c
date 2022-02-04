@@ -1,5 +1,6 @@
 #include "graphics_ctx.h"
 #include "../utils/misc.h"
+#include "../utils/string.h"
 #include <stddef.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -35,7 +36,7 @@ void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
 
 	for(int pixel_row = 0; pixel_row < ctx->row_height; ++pixel_row) {
 		void *dest = (void *) ctx->fb->framebuffer_addr + screen_index;
-		unsigned short *src = ctx->buffer + buff_index;
+		uint32_t *src = ctx->buffer + buff_index;
 		size_t size = ctx->fb->framebuffer_width * ctx->fb->framebuffer_bpp / 8;
 		memmove(dest, src, size);
 		
@@ -50,7 +51,7 @@ void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
 {
 	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
 	for(int j = coords.y; j < coords.y + dims.height; ++j) {
-		int index = j * ctx->fb->framebuffer_pitch + coords.x >> 1;
+		int index = j * ctx->fb->framebuffer_pitch + coords.x ;
 		size_t size = dims.width * ctx->fb->framebuffer_bpp / 8;
 		memset(ctx->buffer + index, packed_rgb, size);
 	}
@@ -89,12 +90,9 @@ void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 	for(int j = 0; j < font->height; ++j) {
 		const uint8_t row = char_bmp[j];
 		for(int i = 0; i < font->width; ++i) {
-			int index = coords.x + i + 
-						(coords.y + j) * ctx->fb->framebuffer_width;
 			if(GetNthBit(row, i)) {
+				int index = coords.x + i + (coords.y + j) * ctx->fb->framebuffer_width;
 				*((uint32_t*) ctx->buffer + index) = packed_rgb;
-			} else {						
-				*((uint32_t*) ctx->buffer + index) = back;
 			}
 		}
 	}
