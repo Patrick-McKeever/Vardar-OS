@@ -59,4 +59,29 @@ void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coord, char c);
  */
 void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coord, char *str);
 
+/**
+ * Take the pixels in the rectangle with the specified top left corner and the
+ * specified dimensions, shift them upwards by the specified num pixels and
+ * leftwards by the speicified num pixels.
+ * @input ctx The graphics context on which this operation is to be performed.
+ * @input top_left The top left of the rectangle to transpose.
+ * @input dims The dimensions of rectangle to transpose.
+ * @input down The number of pixels downwards (negative for upwards) to 
+ *			   transpose the pixels.
+ * @input left The number of pixels leftwards (negative for rightwards) to tran-
+ *			   spose the specified rectangle.
+ */
+void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dim, int down, 
+			   int left);
+
+/**
+ * Calculate the index in the framebuffer of the pixel identified by the given
+ * coordinates.
+ * @input ctx The graphics ctx whose framebuffer will be searched.
+ * @input coords The coordinate whose index we seek to identify.
+ * @output The offset from the beginning of ctx's framebuffer of the given
+ *		   pixel.
+ */
+int PixelIndex(GraphicsCtx *ctx, Coordinate coords);
+
 #endif

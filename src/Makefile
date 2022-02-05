@@ -1,8 +1,8 @@
-#CC := /usr/local/x86_64-elfgcc/bin/x86_64-elf-gcc
-CC := gcc
-LD := ld
+CC := /usr/local/x86_64-elfgcc/bin/x86_64-elf-gcc
+#CC := gcc
+#LD := ld
 AS := nasm
-#LD := /usr/local/x86_64-elfgcc/bin/x86_64-elf-ld 
+LD := /usr/local/x86_64-elfgcc/bin/x86_64-elf-ld 
 
 CFLAGS := 				 	\
 	-I ../kernel/		 	\

@@ -51,7 +51,7 @@ void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
 {
 	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
 	for(int j = coords.y; j < coords.y + dims.height; ++j) {
-		int index = j * ctx->fb->framebuffer_pitch + coords.x ;
+		int index = j * ctx->fb->framebuffer_width + coords.x ;
 		size_t size = dims.width * ctx->fb->framebuffer_bpp / 8;
 		memset(ctx->buffer + index, packed_rgb, size);
 	}
@@ -105,3 +105,47 @@ void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 	}
 }
 
+void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dims, int down, 
+			   int left)
+{
+	// Transpose each individual row of the requested rectangle.
+	for(int y = top_left.y; y < top_left.y + dims.height; ++y) {
+		// Where are we transposing from?
+		Coordinate src_coords = { 
+			.x = top_left.x, 
+			.y = top_left.y + y
+		};
+		uint32_t *src = ctx->buffer + PixelIndex(ctx, src_coords);
+		// Where are we transposing to?
+		Coordinate dest_coords = { 
+			.x = top_left.x + left,
+			.y = top_left.y + down 
+		};
+		uint32_t *dest = ctx->buffer + PixelIndex(ctx, dest_coords);
+		// 4 bytes per pixel.
+		size_t num_bytes_to_move = dims.width * 4;
+		memmove(src, dest, num_bytes_to_move);
+	}
+	
+	// We must now invalidate the range of rows which were transposed from,
+	// transposed to, or in between.
+	int top_row 	= down > 0 ? top_left.y : top_left.y + down;
+	int bottom_row 	= down > 0 ? top_left.y + dims.height + down :
+								 top_left.y + dims.height;
+
+	int top_invalid_row 	= top_row / ctx->row_height;
+	int bottom_invalid_row 	= bottom_row / ctx->row_height;
+	// Poor man's ceil. 
+	bottom_invalid_row += ((bottom_row % ctx->row_height) != 0);
+
+	// Note that, since y increases as we go *down* the screen, top_invalid_row
+	// will be less than bottom_invalid_row.
+	for(int i = top_invalid_row; i < bottom_invalid_row; ++i) {
+		SetNthBit(&ctx->dirty_block_str, i);
+	}
+}
+
+int PixelIndex(GraphicsCtx *ctx, Coordinate coords)
+{
+	return coords.x + coords.y * ctx->fb->framebuffer_width;
+}
