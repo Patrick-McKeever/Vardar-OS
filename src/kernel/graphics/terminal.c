@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "../interrupts/keycodes.h"
 #include <stdbool.h>
 
 Terminal InitTerminal(GraphicsCtx *parent_ctx, Dimensions dims, 
@@ -51,8 +52,8 @@ void TermPrint(Terminal *term, const char *str)
 void Render(Terminal *term)
 {
 	// Draw terminal body, parts of which will be overwrriten by borders.
-	DrawRect(term->parent_ctx, term->top_left, term->dims, term->bg_color);
 	RenderBorders(term);
+	DrawRect(term->parent_ctx, term->top_left, term->dims, term->bg_color);
 	TermPrint(term, term->prompt);
 }
 
@@ -88,32 +89,10 @@ void RenderBorders(Terminal *term)
 		.width = term->dims.width + term->border_thickness * 2,
 		.height = term->dims.height + term->border_thickness * 2
 	};
+	DrawRect(term->parent_ctx, top_left, dims, term->border_color);
+}
 
-	// Top border.	
-	DrawRect(term->parent_ctx, top_left, 
-			(Dimensions) {dims.width, term->border_thickness}, 
-			term->border_color);
+void HandleKeyStroke(KeyInfo *key_info)
+{
 
-	// Left border.
-	DrawRect(term->parent_ctx, top_left, 
-			 (Dimensions) {term->border_thickness, dims.height}, 
-			 term->border_color);
-
-	// Bottom border.	
-	Coordinate bottom_left = {
-		.x = top_left.x,
-		.y = top_left.y + dims.height - term->border_thickness 
-	};
-	DrawRect(term->parent_ctx, bottom_left, 
-			 (Dimensions) {dims.width, term->border_thickness}, 
-			 term->border_color);
-	
-	// Right border.
-	Coordinate top_right = {
-		.x = top_left.x + dims.width - term->border_thickness,
-		.y = top_left.y 
-	};
-	DrawRect(term->parent_ctx, top_right,
-			 (Dimensions) {term->border_thickness, dims.height},
-			 term->border_color);
 }

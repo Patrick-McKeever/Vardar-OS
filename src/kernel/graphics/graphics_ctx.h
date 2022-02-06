@@ -22,6 +22,13 @@ typedef struct {
 GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer  *fb);
 
 /**
+ * Clear all pixels in screen to certain color.
+ * @input ctx The context containing the framebuffer to clear.
+ * @input rgb The color to which we should clear the screen.
+ */
+void ClearScreen(GraphicsCtx *ctx, RGB rgb);
+
+/**
  * Write the dirty rectangles of the back buffer to video memory.
  * @input ctx The graphics context containing the buffer to write back.
  */

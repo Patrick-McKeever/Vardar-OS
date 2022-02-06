@@ -20,12 +20,24 @@ GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
 	return ctx;
 }
 
+void ClearScreen(GraphicsCtx *ctx, RGB rgb)
+{
+	int num_pixels = ctx->fb->framebuffer_height * ctx->fb->framebuffer_width;
+	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
+
+	for(int i = 0; i < num_pixels; ++i) {
+		*(ctx->buffer + i) = packed_rgb;
+	}
+	ctx->dirty_block_str = 0xFFFFFFFFFFFFFFFF;
+}
+
 void WriteBack(GraphicsCtx *ctx)
 {
 	for(int x = 0; x < ctx->num_rows; ++x) {
 		if(GetNthBit(ctx->dirty_block_str, x)) {
 			WriteBackCell(ctx, x);
 		}
+		WriteBackCell(ctx, x);
 	}
 }
 
@@ -39,7 +51,7 @@ void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
 		uint32_t *src = ctx->buffer + buff_index;
 		size_t size = ctx->fb->framebuffer_width * ctx->fb->framebuffer_bpp / 8;
 		memmove(dest, src, size);
-		
+
 		buff_index += ctx->fb->framebuffer_width;
 		screen_index += ctx->fb->framebuffer_pitch;
 	}
@@ -50,11 +62,15 @@ void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
 void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
 {
 	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
-	for(int j = coords.y; j < coords.y + dims.height; ++j) {
-		int index = j * ctx->fb->framebuffer_width + coords.x ;
-		size_t size = dims.width * ctx->fb->framebuffer_bpp / 8;
-		memset(ctx->buffer + index, packed_rgb, size);
+	
+	uint32_t *where = ctx->buffer + PixelIndex(ctx, coords);
+	for(int i = 0; i < dims.width; ++i) {
+		for(int j = 0; j < dims.height; ++j) {
+			*(where + j) = packed_rgb;
+		}
+		where += ctx->fb->framebuffer_width;
 	}
+
 	int starting_row = coords.y / ctx->row_height;
 	int ending_row = (coords.y + dims.height) / ctx->row_height;
 	for(int i = starting_row; i < ending_row; ++i) {
@@ -84,9 +100,8 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
 void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 {
 	const uint8_t *char_bmp = font->matrix[(int) c];
-	uint32_t packed_rgb = PackRgb(font->rgb, ctx->fb),
-			 back = PackRgb((RGB) {0,0,0}, ctx->fb);
-	
+	uint32_t packed_rgb = PackRgb(font->rgb, ctx->fb);
+
 	for(int j = 0; j < font->height; ++j) {
 		const uint8_t row = char_bmp[j];
 		for(int i = 0; i < font->width; ++i) {
