@@ -139,8 +139,8 @@ KeystrokeConsumer GenerateKsc(KeyHandlerLambda lambda, GraphicsCtx *ctx, Font *f
 }
 
 #include "graphics/terminal.h"
-//struct stivale_2_struct_tag_framebuffer *global_fb;
-// The following will be our kernel's entry point.
+Terminal term;
+
 void _start(struct stivale2_struct *stivale2_struct) {
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
@@ -155,13 +155,13 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	//Transpose(&ctx, (Coordinate){200,200}, (Dimensions){100,100}, 100, 100);
 	ClearScreen(&ctx, (RGB) {0, 0, 0});
-	InitTerminal(&ctx, (Dimensions){ 500, 500}, (Coordinate) {0,0},
-					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$");
+	term = InitTerminal(&ctx, (Dimensions){ 700, 700}, (Coordinate) {0,0},
+					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
 	WriteBack(&ctx);
 	InitializeIdt();
 	//KeystrokeConsumer ksc = &WriteToTty;
-	SetKeystrokeConsumer(&Handler);
+	SetKeystrokeConsumer(&HandleKeyStroke);
 	
 	//for(int i = 0; i < fb->framebuffer_height * fb->framebuffer_width; ++i) {
 	//	*((uint32_t*)fb->framebuffer_addr + i) = 0xFFFFFFFF;

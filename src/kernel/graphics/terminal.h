@@ -2,6 +2,7 @@
 #define TERMINAL_H
 
 #include "graphics_ctx.h"
+#include "../interrupts/keycodes.h"
 
 typedef struct {
 	GraphicsCtx *parent_ctx;
@@ -28,4 +29,5 @@ void Scroll(Terminal *term);
 
 void RenderBorders(Terminal *term);
 
+void HandleKeyStroke(KeyInfo *key_info);
 #endif

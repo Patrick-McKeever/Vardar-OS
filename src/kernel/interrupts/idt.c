@@ -102,6 +102,7 @@ void Isr1Handler()
 		case LEFT_SHIFT_RELEASED:
 		case RIGHT_SHIFT_RELEASED:
 			KEY_INFO.shift = false;
+			KEY_INFO.scancode = 0;
 			break;
 		
 		case CTRL_PRESSED:
@@ -112,9 +113,10 @@ void Isr1Handler()
 			KEY_INFO.ctrl = false;
 			break;
 	}
-	
-	KeystrokeConsumer ks_consumer = GetKeystrokeConsumer();
-	ks_consumer(&KEY_INFO);
+	if(KEY_INFO.scancode < 0x80) {
+		KeystrokeConsumer ks_consumer = GetKeystrokeConsumer();
+		ks_consumer(&KEY_INFO);
+	}
 
 	// Tell PIC to resume interrupts now that we've handled this one.
 	outportb(MASTER_PIC_COMMAND, 0x20);

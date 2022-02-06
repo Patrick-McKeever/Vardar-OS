@@ -1,13 +1,12 @@
 #include "terminal.h"
-#include "../interrupts/keycodes.h"
 #include <stdbool.h>
 
+static Terminal main_term;
 Terminal InitTerminal(GraphicsCtx *parent_ctx, Dimensions dims, 
 					  Coordinate top_left, Font *font, 
 					  RGB bg, RGB border, uint8_t thickness,
 					  char *prompt)
-{
-	
+{	
 	Terminal term = {
 		.parent_ctx = parent_ctx,
 		.dims = {dims.width - thickness * 2, dims.height - thickness * 2},
@@ -15,13 +14,14 @@ Terminal InitTerminal(GraphicsCtx *parent_ctx, Dimensions dims,
 		.chars_per_line = dims.width / font->width,
 		.num_lines = dims.height / font->height, 
 		.top_left = {top_left.x + thickness, top_left.y + thickness},
-		.cursor = (Coordinate) {thickness, thickness},
+		.cursor = (Coordinate) {top_left.x + thickness, 0},
 		.bg_color = bg,
 		.border_color = border,
 		.border_thickness = thickness,	
 		.prompt = prompt
 	};
-	Render(&term);
+	main_term = term;
+	Render(&main_term);
 	return term;
 }
 
@@ -29,7 +29,9 @@ void TermPrint(Terminal *term, const char *str)
 {
 	char c;
 	for(int k = 0; (c = *(str + k)) != 0; ++k) {
-		bool exceeds_term_width = term->cursor.x > term->dims.width;
+		// Leave a little room on the right side of the terminal.
+		int max_y = term->dims.width - term->border_thickness * 5;
+		bool exceeds_term_width = term->cursor.x > max_y;
 		if(c == '\n' || exceeds_term_width) {
 			term->cursor.x = 0;
 			term->cursor.y += term->font->height;
@@ -94,5 +96,9 @@ void RenderBorders(Terminal *term)
 
 void HandleKeyStroke(KeyInfo *key_info)
 {
-
+	char c[2];
+	c[0] = CharFromScancode(key_info);
+	c[1] = 0;
+	TermPrint(&main_term, c);
+	WriteBack(main_term.parent_ctx);
 }
