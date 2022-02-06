@@ -43,8 +43,8 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
     },
     // We set all the framebuffer specifics to 0 as we want the bootloader
     // to pick the best it can.
-    .framebuffer_width  = 1024,
-    .framebuffer_height = 768,
+    .framebuffer_width  = 1920,
+    .framebuffer_height = 1080/*768*/,
     .framebuffer_bpp    = 16 
 };
 
@@ -155,9 +155,10 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	//Transpose(&ctx, (Coordinate){200,200}, (Dimensions){100,100}, 100, 100);
 	ClearScreen(&ctx, (RGB) {0, 0, 0});
-	term = InitTerminal(&ctx, (Dimensions){ 700, 700}, (Coordinate) {0,0},
+	term = InitTerminal(&ctx, (Dimensions){ fb->framebuffer_width, fb->framebuffer_height}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
+	//DrawRect(&ctx, (Coordinate) {0,0}, (Dimensions) {1920,1000}, (RGB) {255, 0, 255});
 	WriteBack(&ctx);
 	InitializeIdt();
 	//KeystrokeConsumer ksc = &WriteToTty;

@@ -113,6 +113,8 @@ void Isr1Handler()
 			KEY_INFO.ctrl = false;
 			break;
 	}
+	
+	// Only notify on key presses, not on key releases.
 	if(KEY_INFO.scancode < 0x80) {
 		KeystrokeConsumer ks_consumer = GetKeystrokeConsumer();
 		ks_consumer(&KEY_INFO);

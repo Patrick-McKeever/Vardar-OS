@@ -14,7 +14,7 @@ void ClearNthBit(uint64_t *num, uint16_t n)
 
 int GetNthBit(uint64_t num, uint16_t n)
 {
-    return num & (1 << n);
+    return (num >> n) & 1; 
 }
 
 //unsigned long long Floor(long double num)

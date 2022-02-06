@@ -6,7 +6,8 @@
 #include <stdbool.h>
 
 // Solution until we implement PMM.
-static uint32_t BACK_BUFFER[786432];
+static uint32_t BACK_BUFFER[4147200];
+static GraphicsCtx GLOBAL_CTX;
 
 GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
 {
@@ -17,64 +18,81 @@ GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
 		.num_rows = 64,
 		.row_height = fb->framebuffer_height / 64
 	};
+	GLOBAL_CTX = ctx;
 	return ctx;
 }
 
 void ClearScreen(GraphicsCtx *ctx, RGB rgb)
 {
-	int num_pixels = ctx->fb->framebuffer_height * ctx->fb->framebuffer_width;
-	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
+	int num_pixels = GLOBAL_CTX.fb->framebuffer_height * GLOBAL_CTX.fb->framebuffer_width;
+	uint32_t packed_rgb = PackRgb(rgb, GLOBAL_CTX.fb);
 
 	for(int i = 0; i < num_pixels; ++i) {
-		*(ctx->buffer + i) = packed_rgb;
+		*(GLOBAL_CTX.buffer + i) = packed_rgb;
 	}
-	ctx->dirty_block_str = 0xFFFFFFFFFFFFFFFF;
+	GLOBAL_CTX.dirty_block_str = 0xFFFFFFFFFFFFFFFF;
 }
 
 void WriteBack(GraphicsCtx *ctx)
 {
-	for(int x = 0; x < ctx->num_rows; ++x) {
-		if(GetNthBit(ctx->dirty_block_str, x)) {
-			WriteBackCell(ctx, x);
-		}
-		WriteBackCell(ctx, x);
+	for(int x = 0; x < GLOBAL_CTX.num_rows; ++x) {
+		if(GetNthBit(GLOBAL_CTX.dirty_block_str, x)) {
+			WriteBackCell(&GLOBAL_CTX, x);
+		} 
 	}
 }
 
 void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
 {
-	int buff_index = cell_ind * ctx->row_height * ctx->fb->framebuffer_width;
-	int screen_index = cell_ind * ctx->row_height * ctx->fb->framebuffer_pitch;
+	int buff_index = cell_ind * GLOBAL_CTX.row_height * GLOBAL_CTX.fb->framebuffer_width;
+	int screen_index = cell_ind * GLOBAL_CTX.row_height * GLOBAL_CTX.fb->framebuffer_pitch;
 
-	for(int pixel_row = 0; pixel_row < ctx->row_height; ++pixel_row) {
-		void *dest = (void *) ctx->fb->framebuffer_addr + screen_index;
-		uint32_t *src = ctx->buffer + buff_index;
-		size_t size = ctx->fb->framebuffer_width * ctx->fb->framebuffer_bpp / 8;
+	for(int pixel_row = 0; pixel_row < GLOBAL_CTX.row_height; ++pixel_row) {
+		void *dest = (void *) GLOBAL_CTX.fb->framebuffer_addr + screen_index;
+		uint32_t *src = GLOBAL_CTX.buffer + buff_index;
+		size_t size = GLOBAL_CTX.fb->framebuffer_width * GLOBAL_CTX.fb->framebuffer_bpp / 8;
 		memmove(dest, src, size);
 
-		buff_index += ctx->fb->framebuffer_width;
-		screen_index += ctx->fb->framebuffer_pitch;
+		buff_index += GLOBAL_CTX.fb->framebuffer_width;
+		screen_index += GLOBAL_CTX.fb->framebuffer_pitch;
 	}
 	
-	ClearNthBit(&ctx->dirty_block_str, cell_ind);
+	ClearNthBit(&GLOBAL_CTX.dirty_block_str, cell_ind);
 }
 
 void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
 {
-	uint32_t packed_rgb = PackRgb(rgb, ctx->fb);
+	uint32_t packed_rgb = PackRgb(rgb, GLOBAL_CTX.fb);	
+	uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(&GLOBAL_CTX, coords);
 	
-	uint32_t *where = ctx->buffer + PixelIndex(ctx, coords);
-	for(int i = 0; i < dims.width; ++i) {
-		for(int j = 0; j < dims.height; ++j) {
-			*(where + j) = packed_rgb;
-		}
-		where += ctx->fb->framebuffer_width;
+	// Fill in the first row.
+	for(int pixel = 0; pixel < dims.width; ++pixel) {
+		*(dest+pixel) = packed_rgb;
 	}
+	
+	// And now, since all subsequent rows are identical, just memmove that row
+	// to all subsequent rows.
+	// Is this method actually more efficient than pixel-by-pixel? Would the'
+	
+	size_t bytes_per_rect_row = dims.width * GLOBAL_CTX.fb->framebuffer_bpp / 8;
+	uint32_t *src = dest;
+	for(int row = 1; row < dims.height; ++row) {
+		dest += GLOBAL_CTX.fb->framebuffer_width;
+		memmove(dest, src, bytes_per_rect_row);
+	}
+	
+	//uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(ctx, coords);
+	//for(int i = 0; i < dims.height; ++i) {
+	//	for(int j = 0; j < dims.width; ++j) {
+	//		*(where + j) = packed_rgb;
+	//	}
+	//	where += GLOBAL_CTX.fb->framebuffer_width;
+	//}
 
-	int starting_row = coords.y / ctx->row_height;
-	int ending_row = (coords.y + dims.height) / ctx->row_height;
+	int starting_row = coords.y / GLOBAL_CTX.row_height;
+	int ending_row = (coords.y + dims.height) / GLOBAL_CTX.row_height;
 	for(int i = starting_row; i < ending_row; ++i) {
-		SetNthBit(&ctx->dirty_block_str, i);
+		SetNthBit(&GLOBAL_CTX.dirty_block_str, i);
 	}
 }
 
@@ -84,7 +102,7 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
 	char c;
 	// Iterate through chars, terminate at /0.
 	for(int k = 0; (c = *(str + k)) != 0; ++k) {
-		bool exceeds_fb_width = (coords.x + x) > ctx->fb->framebuffer_width;
+		bool exceeds_fb_width = (coords.x + x) > GLOBAL_CTX.fb->framebuffer_width;
 		if(c == '\n' || exceeds_fb_width) {
 			x = coords.x;
 			y += font->height;
@@ -100,23 +118,23 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
 void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 {
 	const uint8_t *char_bmp = font->matrix[(int) c];
-	uint32_t packed_rgb = PackRgb(font->rgb, ctx->fb);
+	uint32_t packed_rgb = PackRgb(font->rgb, GLOBAL_CTX.fb);
 
 	for(int j = 0; j < font->height; ++j) {
 		const uint8_t row = char_bmp[j];
 		for(int i = 0; i < font->width; ++i) {
 			if(GetNthBit(row, i)) {
-				int index = coords.x + i + (coords.y + j) * ctx->fb->framebuffer_width;
-				*((uint32_t*) ctx->buffer + index) = packed_rgb;
+				int index = coords.x + i + (coords.y + j) * GLOBAL_CTX.fb->framebuffer_width;
+				*((uint32_t*) GLOBAL_CTX.buffer + index) = packed_rgb;
 			}
 		}
 	}
 	
-	int starting_row = coords.y / ctx->row_height;
-	int ending_row = (coords.y + font->height) / ctx->row_height;
-	ending_row += 1 * (((coords.y + font->height) % ctx->row_height) > 0);
+	int starting_row = coords.y / GLOBAL_CTX.row_height;
+	int ending_row = (coords.y + font->height) / GLOBAL_CTX.row_height;
+	ending_row += 1 * (((coords.y + font->height) % GLOBAL_CTX.row_height) > 0);
 	for(int i = starting_row; i < ending_row; ++i) {
-		SetNthBit(&ctx->dirty_block_str, i);
+		SetNthBit(&GLOBAL_CTX.dirty_block_str, i);
 	}
 }
 
@@ -130,13 +148,13 @@ void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dims, int down,
 			.x = top_left.x, 
 			.y = top_left.y + y
 		};
-		uint32_t *src = ctx->buffer + PixelIndex(ctx, src_coords);
+		uint32_t *src = GLOBAL_CTX.buffer + PixelIndex(ctx, src_coords);
 		// Where are we transposing to?
 		Coordinate dest_coords = { 
 			.x = top_left.x + left,
 			.y = top_left.y + down 
 		};
-		uint32_t *dest = ctx->buffer + PixelIndex(ctx, dest_coords);
+		uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(ctx, dest_coords);
 		// 4 bytes per pixel.
 		size_t num_bytes_to_move = dims.width * 4;
 		memmove(src, dest, num_bytes_to_move);
@@ -148,19 +166,19 @@ void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dims, int down,
 	int bottom_row 	= down > 0 ? top_left.y + dims.height + down :
 								 top_left.y + dims.height;
 
-	int top_invalid_row 	= top_row / ctx->row_height;
-	int bottom_invalid_row 	= bottom_row / ctx->row_height;
+	int top_invalid_row 	= top_row / GLOBAL_CTX.row_height;
+	int bottom_invalid_row 	= bottom_row / GLOBAL_CTX.row_height;
 	// Poor man's ceil. 
-	bottom_invalid_row += ((bottom_row % ctx->row_height) != 0);
+	bottom_invalid_row += ((bottom_row % GLOBAL_CTX.row_height) != 0);
 
 	// Note that, since y increases as we go *down* the screen, top_invalid_row
 	// will be less than bottom_invalid_row.
 	for(int i = top_invalid_row; i < bottom_invalid_row; ++i) {
-		SetNthBit(&ctx->dirty_block_str, i);
+		SetNthBit(&GLOBAL_CTX.dirty_block_str, i);
 	}
 }
 
 int PixelIndex(GraphicsCtx *ctx, Coordinate coords)
 {
-	return coords.x + coords.y * ctx->fb->framebuffer_width;
+	return coords.x + coords.y * GLOBAL_CTX.fb->framebuffer_width;
 }
