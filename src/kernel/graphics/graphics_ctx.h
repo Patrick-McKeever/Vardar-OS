@@ -19,27 +19,27 @@ typedef struct {
 /**
  * Provide a graphics context with an empty screen
  */
-GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer  *fb);
+void InitGraphicsCtx(struct stivale2_struct_tag_framebuffer  *fb);
 
 /**
  * Clear all pixels in screen to certain color.
  * @input ctx The context containing the framebuffer to clear.
  * @input rgb The color to which we should clear the screen.
  */
-void ClearScreen(GraphicsCtx *ctx, RGB rgb);
+void ClearScreen(RGB rgb);
 
 /**
  * Write the dirty rectangles of the back buffer to video memory.
  * @input ctx The graphics context containing the buffer to write back.
  */
-void WriteBack(GraphicsCtx *ctx);
+void WriteBack();
 
 /**
  * Write back a given cell from the back buffer to video memory.
  * @input ctx The graphics context containing the back buffer.
  * @input ind The index [0,64) that identifies the cell to write back.
  */
-void WriteBackCell(GraphicsCtx *ctx, uint8_t ind);
+void WriteBackCell(uint8_t ind);
 
 /**
  * Draw a rectangle to the back buffer of a given screen.
@@ -49,12 +49,12 @@ void WriteBackCell(GraphicsCtx *ctx, uint8_t ind);
  * @input dim The dimensions of the rectangle.
  * @input rgb The color of the rectangle.
  */
-void DrawRect(GraphicsCtx *ctx, Coordinate coord, Dimensions dim, RGB rgb);
+void DrawRect(Coordinate coord, Dimensions dim, RGB rgb);
 
 /**
  * Draw character c in the given font at the given coordinates.
  */
-void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coord, char c);
+void DrawChar(Font *font, Coordinate coord, char c);
 
 /**
  * Print the given string at the desired location in a graphics context's back
@@ -64,7 +64,7 @@ void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coord, char c);
  * @input coord The top left corner of the space containing the screen.
  * @input str The string to be printed.
  */
-void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coord, char *str);
+void PrintStr(Font *font, Coordinate coord, char *str);
 
 /**
  * Take the pixels in the rectangle with the specified top left corner and the
@@ -78,8 +78,7 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coord, char *str);
  * @input left The number of pixels leftwards (negative for rightwards) to tran-
  *			   spose the specified rectangle.
  */
-void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dim, int down, 
-			   int left);
+void Transpose(Coordinate top_left, Dimensions dim, int down, int left);
 
 /**
  * Calculate the index in the framebuffer of the pixel identified by the given
@@ -89,6 +88,6 @@ void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dim, int down,
  * @output The offset from the beginning of ctx's framebuffer of the given
  *		   pixel.
  */
-int PixelIndex(GraphicsCtx *ctx, Coordinate coords);
+int PixelIndex(Coordinate coords);
 
 #endif

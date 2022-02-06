@@ -9,7 +9,7 @@
 static uint32_t BACK_BUFFER[4147200];
 static GraphicsCtx GLOBAL_CTX;
 
-GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
+void InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
 {
 	GraphicsCtx ctx = {
 		.fb = fb,
@@ -19,10 +19,10 @@ GraphicsCtx InitGraphicsCtx(struct stivale2_struct_tag_framebuffer *fb)
 		.row_height = fb->framebuffer_height / 64
 	};
 	GLOBAL_CTX = ctx;
-	return ctx;
+	//return ctx;
 }
 
-void ClearScreen(GraphicsCtx *ctx, RGB rgb)
+void ClearScreen(RGB rgb)
 {
 	int num_pixels = GLOBAL_CTX.fb->framebuffer_height * GLOBAL_CTX.fb->framebuffer_width;
 	uint32_t packed_rgb = PackRgb(rgb, GLOBAL_CTX.fb);
@@ -33,16 +33,16 @@ void ClearScreen(GraphicsCtx *ctx, RGB rgb)
 	GLOBAL_CTX.dirty_block_str = 0xFFFFFFFFFFFFFFFF;
 }
 
-void WriteBack(GraphicsCtx *ctx)
+void WriteBack()
 {
 	for(int x = 0; x < GLOBAL_CTX.num_rows; ++x) {
 		if(GetNthBit(GLOBAL_CTX.dirty_block_str, x)) {
-			WriteBackCell(&GLOBAL_CTX, x);
+			WriteBackCell(x);
 		} 
 	}
 }
 
-void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
+void WriteBackCell(uint8_t cell_ind)
 {
 	int buff_index = cell_ind * GLOBAL_CTX.row_height * GLOBAL_CTX.fb->framebuffer_width;
 	int screen_index = cell_ind * GLOBAL_CTX.row_height * GLOBAL_CTX.fb->framebuffer_pitch;
@@ -60,10 +60,10 @@ void WriteBackCell(GraphicsCtx *ctx, uint8_t cell_ind)
 	ClearNthBit(&GLOBAL_CTX.dirty_block_str, cell_ind);
 }
 
-void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
+void DrawRect(Coordinate coords, Dimensions dims, RGB rgb)
 {
 	uint32_t packed_rgb = PackRgb(rgb, GLOBAL_CTX.fb);	
-	uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(&GLOBAL_CTX, coords);
+	uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(coords);
 	
 	// Fill in the first row.
 	for(int pixel = 0; pixel < dims.width; ++pixel) {
@@ -96,7 +96,7 @@ void DrawRect(GraphicsCtx *ctx, Coordinate coords, Dimensions dims, RGB rgb)
 	}
 }
 
-void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
+void PrintStr(Font *font, Coordinate coords, char* str)
 {
 	int x = coords.x, y = coords.y;
 	char c;
@@ -109,13 +109,13 @@ void PrintStr(GraphicsCtx *ctx, Font *font, Coordinate coords, char* str)
 		} else {
 			x += font->width;
 			Coordinate new_coords = {coords.x + x, coords.y + y};
-			DrawChar(ctx, font, new_coords, c);
+			DrawChar(font, new_coords, c);
 		}
 
 	}
 }
 
-void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
+void DrawChar(Font *font, Coordinate coords, char c)
 {
 	const uint8_t *char_bmp = font->matrix[(int) c];
 	uint32_t packed_rgb = PackRgb(font->rgb, GLOBAL_CTX.fb);
@@ -138,26 +138,25 @@ void DrawChar(GraphicsCtx *ctx, Font *font, Coordinate coords, char c)
 	}
 }
 
-void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dims, int down, 
-			   int left)
+void Transpose(Coordinate top_left, Dimensions dims, int down, int left)
 {
 	// Transpose each individual row of the requested rectangle.
 	for(int y = top_left.y; y < top_left.y + dims.height; ++y) {
 		// Where are we transposing from?
 		Coordinate src_coords = { 
 			.x = top_left.x, 
-			.y = top_left.y + y
+			.y = y 
 		};
-		uint32_t *src = GLOBAL_CTX.buffer + PixelIndex(ctx, src_coords);
+		uint32_t *src = GLOBAL_CTX.buffer + PixelIndex(src_coords);
 		// Where are we transposing to?
 		Coordinate dest_coords = { 
 			.x = top_left.x + left,
-			.y = top_left.y + down 
+			.y = y + down
 		};
-		uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(ctx, dest_coords);
+		uint32_t *dest = GLOBAL_CTX.buffer + PixelIndex(dest_coords);
 		// 4 bytes per pixel.
-		size_t num_bytes_to_move = dims.width * 4;
-		memmove(src, dest, num_bytes_to_move);
+		size_t num_bytes_to_move = dims.width * GLOBAL_CTX.fb->framebuffer_bpp / 8;
+		memmove(dest, src, num_bytes_to_move);
 	}
 	
 	// We must now invalidate the range of rows which were transposed from,
@@ -178,7 +177,7 @@ void Transpose(GraphicsCtx *ctx, Coordinate top_left, Dimensions dims, int down,
 	}
 }
 
-int PixelIndex(GraphicsCtx *ctx, Coordinate coords)
+int PixelIndex(Coordinate coords)
 {
 	return coords.x + coords.y * GLOBAL_CTX.fb->framebuffer_width;
 }

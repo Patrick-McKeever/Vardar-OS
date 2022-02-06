@@ -2,19 +2,18 @@
 #include <stdbool.h>
 
 static Terminal main_term;
-Terminal InitTerminal(GraphicsCtx *parent_ctx, Dimensions dims, 
+Terminal InitTerminal(Dimensions dims, 
 					  Coordinate top_left, Font *font, 
 					  RGB bg, RGB border, uint8_t thickness,
 					  char *prompt)
 {	
 	Terminal term = {
-		.parent_ctx = parent_ctx,
 		.dims = {dims.width - thickness * 2, dims.height - thickness * 2},
 		.font = font,
 		.chars_per_line = dims.width / font->width,
 		.num_lines = dims.height / font->height, 
 		.top_left = {top_left.x + thickness, top_left.y + thickness},
-		.cursor = (Coordinate) {top_left.x + thickness, 0},
+		.cursor = (Coordinate) {0, 0},
 		.bg_color = bg,
 		.border_color = border,
 		.border_thickness = thickness,	
@@ -30,14 +29,14 @@ void TermPrint(Terminal *term, const char *str)
 	char c;
 	for(int k = 0; (c = *(str + k)) != 0; ++k) {
 		// Leave a little room on the right side of the terminal.
-		int max_y = term->dims.width - term->border_thickness * 5;
+		int max_y = term->dims.width - term->border_thickness * 6;
 		bool exceeds_term_width = term->cursor.x > max_y;
 		if(c == '\n' || exceeds_term_width) {
 			term->cursor.x = 0;
-			term->cursor.y += term->font->height;
-
-			if(term->cursor.y > term->dims.height) {
+			if((term->cursor.y + term->font->height * 2) > term->dims.height) {
 				Scroll(term);
+			} else {
+				term->cursor.y += term->font->height;
 			}
 		} else {
 			term->cursor.x += term->font->width;
@@ -47,7 +46,7 @@ void TermPrint(Terminal *term, const char *str)
 			.x = term->top_left.x + term->cursor.x,
 			.y = term->top_left.y + term->cursor.y
 		};
-		DrawChar(term->parent_ctx, term->font, char_coords, c);		
+		DrawChar(term->font, char_coords, c);		
 	}
 }
 
@@ -55,27 +54,37 @@ void Render(Terminal *term)
 {
 	// Draw terminal body, parts of which will be overwrriten by borders.
 	RenderBorders(term);
-	DrawRect(term->parent_ctx, term->top_left, term->dims, term->bg_color);
+	DrawRect(term->top_left, term->dims, term->bg_color);
 	TermPrint(term, term->prompt);
 }
 
 void Scroll(Terminal *term)
 {
-	for(int i = 1; i < term->num_lines; ++i) {
+	for(int i = 1; i <= main_term.num_lines; ++i) {
 		Coordinate row_top_left = {
-			.x = term->top_left.x,
-			.y = i * term->font->height + term->top_left.y,
+			.x = main_term.top_left.x,
+			.y = i * main_term.font->height + main_term.top_left.y,
 		};
 		
 		Dimensions row_dims = {
-			.width = term->dims.width,
-			.height = term->font->height
+			.width = main_term.dims.width,
+			.height = main_term.font->height
 		};
 
-		Transpose(term->parent_ctx, row_top_left, row_dims, 
-				  term->font->height, 0);
+		Transpose(row_top_left, row_dims, -1 * main_term.font->height, 0);
+		WriteBack();
 	}
-	WriteBack(term->parent_ctx);
+	
+	Coordinate final_rect_top_left = {
+		.x = main_term.top_left.x,
+		.y = main_term.top_left.y + main_term.font->height * (main_term.num_lines - 1)
+	};
+	Dimensions final_rect_dims = {
+		.width = main_term.dims.width,
+		.height = main_term.font->height 
+	};
+	DrawRect(final_rect_top_left, final_rect_dims, term->bg_color);
+	WriteBack();
 }
 
 void RenderBorders(Terminal *term)
@@ -91,7 +100,7 @@ void RenderBorders(Terminal *term)
 		.width = term->dims.width + term->border_thickness * 2,
 		.height = term->dims.height + term->border_thickness * 2
 	};
-	DrawRect(term->parent_ctx, top_left, dims, term->border_color);
+	DrawRect(top_left, dims, term->border_color);
 }
 
 void HandleKeyStroke(KeyInfo *key_info)
@@ -100,5 +109,5 @@ void HandleKeyStroke(KeyInfo *key_info)
 	c[0] = CharFromScancode(key_info);
 	c[1] = 0;
 	TermPrint(&main_term, c);
-	WriteBack(main_term.parent_ctx);
+	WriteBack();
 }

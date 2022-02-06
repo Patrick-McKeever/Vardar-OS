@@ -5,7 +5,6 @@
 #include "../interrupts/keycodes.h"
 
 typedef struct {
-	GraphicsCtx *parent_ctx;
 	Dimensions dims;
 	Font *font; 
 	uint16_t chars_per_line, num_lines;
@@ -16,7 +15,7 @@ typedef struct {
 	// malloc/realloc this once we implement MM.
 } Terminal;
 
-Terminal InitTerminal(GraphicsCtx *parent_ctx, Dimensions dims, 
+Terminal InitTerminal(Dimensions dims, 
 					  Coordinate top_left, Font *font, 
 					  RGB bg, RGB border, uint8_t thickness,
 					  char *prompt);

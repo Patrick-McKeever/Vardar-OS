@@ -114,30 +114,7 @@ struct stivale2_struct_tag_terminal *term_str_tag_g;
 
 
 static Font *global_font;
-static GraphicsCtx *global_ctx;
-
-void Handler(KeyInfo *key_info)
-{
-	char c = CharFromScancode(key_info);
-	DrawChar(global_ctx, global_font, (Coordinate) {0,0}, c);
-	WriteBack(global_ctx);
-}
-
-void WriteToTty(GraphicsCtx *ctx, Font *font, KeyInfo *key_info)
-{
-	char c = CharFromScancode(key_info);
-	DrawChar(ctx, font, (Coordinate) {0,0}, c);
-	WriteBack(ctx);
-}
-typedef void (*KeyHandlerLambda)(GraphicsCtx*, Font*, KeyInfo*);
-KeystrokeConsumer GenerateKsc(KeyHandlerLambda lambda, GraphicsCtx *ctx, Font *font) 
-{
-	void ksc(KeyInfo *key_info) {
-		lambda(ctx, font, key_info);
-	}
-	return ksc;
-}
-
+//static GraphicsCtx *global_ctx;
 #include "graphics/terminal.h"
 Terminal term;
 
@@ -145,29 +122,23 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 
-	GraphicsCtx ctx = InitGraphicsCtx(fb);
-	global_ctx = &ctx;
+	InitGraphicsCtx(fb);
+	//global_ctx = &ctx;
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 
 	font_obj.rgb = (RGB) {255, 0, 0};
 	char success[] = "SUCCESS";
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
-	//Transpose(&ctx, (Coordinate){200,200}, (Dimensions){100,100}, 100, 100);
-	ClearScreen(&ctx, (RGB) {0, 0, 0});
-	term = InitTerminal(&ctx, (Dimensions){ fb->framebuffer_width, fb->framebuffer_height}, (Coordinate) {0,0},
+	ClearScreen((RGB) {0, 0, 0});
+	term = InitTerminal((Dimensions){ 300/*fb->framebuffer_width*/, 70/*fb->framebuffer_height*/}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
-	//DrawRect(&ctx, (Coordinate) {0,0}, (Dimensions) {1920,1000}, (RGB) {255, 0, 255});
-	WriteBack(&ctx);
+	//Transpose((Coordinate){0,0}, (Dimensions){100,100}, 100; 100);
+	WriteBack();
 	InitializeIdt();
-	//KeystrokeConsumer ksc = &WriteToTty;
 	SetKeystrokeConsumer(&HandleKeyStroke);
 	
-	//for(int i = 0; i < fb->framebuffer_height * fb->framebuffer_width; ++i) {
-	//	*((uint32_t*)fb->framebuffer_addr + i) = 0xFFFFFFFF;
-	//}
-
     for (;;) {
         asm ("hlt");
     }
