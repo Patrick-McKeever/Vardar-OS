@@ -131,7 +131,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	char success[] = "SUCCESS";
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	ClearScreen((RGB) {0, 0, 0});
-	term = InitTerminal((Dimensions){ 300/*fb->framebuffer_width*/, 70/*fb->framebuffer_height*/}, (Coordinate) {0,0},
+	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
 	//Transpose((Coordinate){0,0}, (Dimensions){100,100}, 100; 100);

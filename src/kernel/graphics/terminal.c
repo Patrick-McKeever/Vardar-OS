@@ -2,6 +2,9 @@
 #include <stdbool.h>
 
 static Terminal main_term;
+static void RemoveChar();
+static void TermNewLine(Terminal *term);
+
 Terminal InitTerminal(Dimensions dims, 
 					  Coordinate top_left, Font *font, 
 					  RGB bg, RGB border, uint8_t thickness,
@@ -24,6 +27,7 @@ Terminal InitTerminal(Dimensions dims,
 	return term;
 }
 
+
 void TermPrint(Terminal *term, const char *str)
 {
 	char c;
@@ -32,15 +36,10 @@ void TermPrint(Terminal *term, const char *str)
 		int max_y = term->dims.width - term->border_thickness * 6;
 		bool exceeds_term_width = term->cursor.x > max_y;
 		if(c == '\n' || exceeds_term_width) {
-			term->cursor.x = 0;
-			if((term->cursor.y + term->font->height * 2) > term->dims.height) {
-				Scroll(term);
-			} else {
-				term->cursor.y += term->font->height;
-			}
+			TermNewLine(term);
 		} else {
 			term->cursor.x += term->font->width;
-		}
+		}	
 		
 		Coordinate char_coords = {
 			.x = term->top_left.x + term->cursor.x,
@@ -108,6 +107,46 @@ void HandleKeyStroke(KeyInfo *key_info)
 	char c[2];
 	c[0] = CharFromScancode(key_info);
 	c[1] = 0;
-	TermPrint(&main_term, c);
+	
+	if(key_info->backspace) {
+		RemoveChar();
+	} else if(key_info->enter) {
+		TermNewLine(&main_term);
+		TermPrint(&main_term, main_term.prompt);
+	} else {
+		TermPrint(&main_term, c);
+	}
 	WriteBack();
+}
+
+static void RemoveChar()
+{
+	if(main_term.cursor.x == 0 && main_term.cursor.y == 0)
+		return;
+	
+	int char_width 	= main_term.font->width,
+		char_height = main_term.font->height;
+	Coordinate char_coords = {
+		.x = main_term.top_left.x + main_term.cursor.x,
+		.y = main_term.top_left.y + main_term.cursor.y
+	};
+	DrawRect(char_coords, (Dimensions){char_width, char_height}, 
+			 main_term.bg_color);
+	if(main_term.cursor.x == 0) {
+		main_term.cursor.x = (main_term.chars_per_line - 1) * char_width;
+		main_term.cursor.y -= char_height;
+	} else {
+		main_term.cursor.x -= char_width; 
+	}
+	
+}
+
+static void TermNewLine(Terminal *term)
+{
+	term->cursor.x = 0;
+	if((term->cursor.y + term->font->height * 2) > term->dims.height) {
+		Scroll(term);
+	} else {
+		term->cursor.y += term->font->height;
+	}
 }

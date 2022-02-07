@@ -94,6 +94,14 @@ void Isr1Handler()
 			KEY_INFO.backspace = false;
 			break;
 		
+		case ENTER_PRESSED:
+			KEY_INFO.enter = true;
+			break;
+		
+		case ENTER_RELEASED:
+			KEY_INFO.enter = false;
+			break;
+		
 		case LEFT_SHIFT_PRESSED:
 		case RIGHT_SHIFT_PRESSED:
 			KEY_INFO.shift = true;

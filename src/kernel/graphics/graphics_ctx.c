@@ -39,6 +39,7 @@ void WriteBack()
 		if(GetNthBit(GLOBAL_CTX.dirty_block_str, x)) {
 			WriteBackCell(x);
 		} 
+		//WriteBackCell(x);
 	}
 }
 
@@ -91,7 +92,8 @@ void DrawRect(Coordinate coords, Dimensions dims, RGB rgb)
 
 	int starting_row = coords.y / GLOBAL_CTX.row_height;
 	int ending_row = (coords.y + dims.height) / GLOBAL_CTX.row_height;
-	for(int i = starting_row; i < ending_row; ++i) {
+	ending_row += (coords.y % GLOBAL_CTX.row_height) == 0;
+	for(int i = starting_row; i <= ending_row; ++i) {
 		SetNthBit(&GLOBAL_CTX.dirty_block_str, i);
 	}
 }

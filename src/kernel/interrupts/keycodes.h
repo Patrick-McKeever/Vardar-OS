@@ -7,6 +7,8 @@
 
 #define BACKSPACE_PRESSED		0x0E
 #define BACKSPACE_RELEASED		0x8E
+#define ENTER_PRESSED			0x1C
+#define ENTER_RELEASED			0x9C
 #define LEFT_SHIFT_PRESSED		0x2A
 #define LEFT_SHIFT_RELEASED		0xAA
 #define RIGHT_SHIFT_PRESSED		0x36
@@ -16,7 +18,7 @@
 
 // Struct to provide information about the current keyboard state.
 typedef struct {
-	bool shift, backspace, ctrl;
+	bool shift, backspace, ctrl, enter;
 	uint8_t scancode;
 } KeyInfo;
 
