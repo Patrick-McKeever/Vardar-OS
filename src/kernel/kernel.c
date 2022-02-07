@@ -29,6 +29,14 @@ static struct stivale2_header_tag_terminal terminal_hdr_tag = {
     .flags = 0
 };
 
+
+static struct stivale2_struct_tag_memmap memmap_tag = {
+	.tag = {
+		.identifier = STIVALE2_STRUCT_TAG_MEMMAP_ID,
+		.next = (uint64_t) &terminal_hdr_tag
+	}
+};
+
 // We are now going to define a framebuffer header tag.
 // This tag tells the bootloader that we want a graphical framebuffer instead
 // of a CGA-compatible text mode. Omitting this tag will make the bootloader
@@ -39,7 +47,7 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
         // Instead of 0, we now point to the previous header tag. The order in
         // which header tags are linked does not matter.
-        .next = (uint64_t)&terminal_hdr_tag
+        .next = (uint64_t)&memmap_tag
     },
     // We set all the framebuffer specifics to 0 as we want the bootloader
     // to pick the best it can.
@@ -131,7 +139,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	char success[] = "SUCCESS";
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	ClearScreen((RGB) {0, 0, 0});
-	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height}, (Coordinate) {0,0},
+	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
 	//Transpose((Coordinate){0,0}, (Dimensions){100,100}, 100; 100);

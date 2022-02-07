@@ -1,6 +1,6 @@
 #include "graphics_ctx.h"
-#include "../utils/misc.h"
-#include "../utils/string.h"
+#include "utils/misc.h"
+#include "utils/string.h"
 #include <stddef.h>
 #include <limits.h>
 #include <stdbool.h>

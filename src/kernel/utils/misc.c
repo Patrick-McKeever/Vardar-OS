@@ -17,6 +17,11 @@ int GetNthBit(uint64_t num, uint16_t n)
     return (num >> n) & 1; 
 }
 
+uint64_t RoundToNearestMultiple(uint64_t num, uint32_t multiple)
+{
+    return ((num + multiple - 1) & ~(multiple - 1));
+}
+
 //unsigned long long Floor(long double num)
 //{
 //	if(/*num >= LLONG_MAX || num <= LLONG_MIN || */num != num) {

@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_CTX_H
 #define GRAPHICS_CTX_H
 
-#include "../stivale2.h"
+#include "stivale2.h"
 #include "graphics_types.h"
 #include "font.h"
 

@@ -2,7 +2,7 @@
 #define TERMINAL_H
 
 #include "graphics_ctx.h"
-#include "../interrupts/keycodes.h"
+#include "interrupts/keycodes.h"
 
 typedef struct {
 	Dimensions dims;

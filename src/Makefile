@@ -5,7 +5,7 @@ AS := nasm
 LD := /usr/local/x86_64-elfgcc/bin/x86_64-elf-ld 
 
 CFLAGS := 				 	\
-	-I ../kernel/		 	\
+	-I ./kernel/		 	\
 	-std=gnu11			 	\
 	-O0	-pipe -g		 	\
 	-ffreestanding       	\

@@ -4,6 +4,7 @@ limine/*
 *.jpg
 *.jpeg
 *.img
+*.d
 *.swp
 *.elf
 *.img

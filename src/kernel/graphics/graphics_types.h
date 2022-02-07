@@ -2,7 +2,7 @@
 #define GRAPHICS_TYPES
 
 #include <stdint.h>
-#include "../stivale2.h"
+#include "stivale2.h"
 
 // These macros will perform right or left shifts but allow negatives for shift
 // values. If a negative is passed as a shift value, the number is shifted in
