@@ -30,12 +30,12 @@ static struct stivale2_header_tag_terminal terminal_hdr_tag = {
 };
 
 
-static struct stivale2_struct_tag_memmap memmap_tag = {
-	.tag = {
-		.identifier = STIVALE2_STRUCT_TAG_MEMMAP_ID,
-		.next = (uint64_t) &terminal_hdr_tag
-	}
-};
+//static struct stivale2_header_tag_memmap memmap_tag = {
+//	.tag = {
+//		.identifier = STIVALE2_STRUCT_TAG_MEMMAP_ID,
+//		.next = (uint64_t) &terminal_hdr_tag
+//	}
+//};
 
 // We are now going to define a framebuffer header tag.
 // This tag tells the bootloader that we want a graphical framebuffer instead
@@ -47,7 +47,8 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
         // Instead of 0, we now point to the previous header tag. The order in
         // which header tags are linked does not matter.
-        .next = (uint64_t)&memmap_tag
+        //.next = (uint64_t)&memmap_tag
+		.next = (uint64_t) &terminal_hdr_tag
     },
     // We set all the framebuffer specifics to 0 as we want the bootloader
     // to pick the best it can.
@@ -124,16 +125,20 @@ struct stivale2_struct_tag_terminal *term_str_tag_g;
 static Font *global_font;
 //static GraphicsCtx *global_ctx;
 #include "graphics/terminal.h"
+#include "memory_management/physical_memory_manager.h"
 Terminal term;
 
 void _start(struct stivale2_struct *stivale2_struct) {
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
+	struct stivale2_struct_tag_memmap *memmap;
+	memmap = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
 
 	InitGraphicsCtx(fb);
 	//global_ctx = &ctx;
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
+	InitPmm(memmap);
 
 	font_obj.rgb = (RGB) {255, 0, 0};
 	char success[] = "SUCCESS";
