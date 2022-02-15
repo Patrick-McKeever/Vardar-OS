@@ -35,36 +35,78 @@
 	& MAX_PAGE_IND
 
 
-static uint64_t *USER_PAGE_TABLE_ROOT;
 static uint64_t *KERNEL_PAGE_TABLE_ROOT;
 
 static uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, int flags);
-
+static uint64_t *GetPageTable(uint64_t *parent, size_t index);
 void InitPageTable(uint64_t *page_table);
 
-void MapPage(uint64_t *page_table_root, size_t vaddr, size_t paddr, 
-			 uint16_t flags)
+bool MapPage(uint64_t *page_table_root, size_t vaddr, size_t paddr, 
+		 	 uint16_t flags)
 {
 	uint64_t *parent_table = page_table_root, child_table;
 	for(int i = 3; i >= 1; --i) {
 		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
 		uint64_t *child_table = GetOrCreatePageTable(parent_table, tab_index, 
 													 flags);
+		if(child_table == NULL)
+			return false;
 		parent_table = child_table;
 	}
 	
 	uint64_t entry = paddr | flags;
 	child_table[V_ADDR_INDEX(vaddr, 1)] = paddr | flags;
+	return true;
 }
 
-uint64_t VAddrToPAddr(uint64_t *table, void *page)
+bool MapKernelPage(size_t vaddr, size_t paddr, uint16_t flags)
 {
-	
+	return MapPage(KERNEL_PAGE_TABLE_ROOT, vaddr, paddr, flags);
 }
 
-void MapKernelPage(size_t vaddr, size_t paddr, uint16_t);
+bool UnmapPage(uint64_t *pagemap, size_t vaddr)
+{
+	uint64_t *parent_table = page_table_root, child_table;
+	for(int i = 3; i >= 1; --i) {
+		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
+		uint64_t *child_table = GetPageTable(parent_table, tab_index);
+		if(child_table == NULL)
+			return false;
+		parent_table = child_table;
+	}
+	child_table[V_ADDR_INDEX(vaddr, 1)] = 0;
+	__asm__ volatile("invlpg (%[pg_addr])" ::[pg_addr] "r" (vaddr));
+	return true;
+}
 
-void MapUserPage(size_t vaddr, size_t paddr);
+bool UnmapKernelPage(size_t vaddr)
+{
+	return UnmapPage(KERNEL_PAGE_TABLE_ROOT, vaddr);
+}
+
+bool RemapKernelPage(size_t former_vaddr, size_t new_vaddr, uint16_t flags)
+{
+	uint64_t paddr = KernelVAddrToPAddr(former_vaddr);
+	UnmapKernelPage(vaddr);
+	MapKernelPage(former_vaddr, paddr, flags);
+}
+
+uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr)
+{
+	uint64_t *parent_table = page_table_root, child_table;
+	for(int i = 3; i >= 1; --i) {
+		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
+		uint64_t *child_table = GetPageTable(parent_table, tab_index);
+		parent_table = child_table;
+	}
+	// Get rid of flags.
+	return (child_table[V_ADDR_INDEX(vaddr, 1)] & ~(0x1FF));
+}
+
+uint64_t KernelVAddrToPAddr(uint64_t vaddr)
+{
+	return VAddrToPadder(KERNEL_PAGE_TABLE_ROOT, vaddr);
+}
 
 void GetPageFlag(uint64_t page, uint64_t flag)
 {
@@ -82,8 +124,14 @@ static uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, int flags)
 		return free_frame;
 	}
 
-	return entry[index];
+	return &entry[index];
 }
 
 
+static uint64_t *GetPageTable(uint64_t *parent, size_t index)
+{
+	if(GetPageFlag(parent[index]), PRESENT)
+		return entry[index];
+	return NULL;
+}
 #endif
