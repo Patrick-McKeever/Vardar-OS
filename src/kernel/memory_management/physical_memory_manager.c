@@ -1,19 +1,18 @@
 #include "physical_memory_manager.h"
 #include "utils/string.h"
-#include <stdbool.h>
 #include <stddef.h>
 
 static MemMap PHYS_MEMORY_MAP;
 
 static uint64_t UppermostUsableAddr(struct stivale2_struct_tag_memmap *memmap);
-static void *FindPageByMinSize(struct stivale2_struct_tag_memmap *memmap,
-							   uint32_t minimum_num_bytes);
+static int FindMemEntryBySize(struct stivale2_struct_tag_memmap *memmap,
+							  uint32_t minimum_num_bytes);
 static void SetPageUsed(int index);
 static void SetPageFree(int index);
 static bool PageIsUsed(int index);
 
 
-void InitPmm(struct stivale2_struct_tag_memmap *memmap)
+bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 {
 	// The stivale boot structure does not guarantee any particular order for
 	// the page frames it gives us. To begin, we should find the address of the
@@ -28,34 +27,20 @@ void InitPmm(struct stivale2_struct_tag_memmap *memmap)
 	PHYS_MEMORY_MAP.bitmap_size = RoundToNearestMultiple(bitmap_size, 
 														 FRAME_SIZE);
 	PHYS_MEMORY_MAP.uppermost_addr = uppermost_usable_addr;	
-	bool found_page = false;
-	for(int i = 0; i < memmap->entries; ++i) {
-		struct stivale2_mmap_entry page_frame = memmap->memmap[i];
-		bool large_enough = page_frame.length >= PHYS_MEMORY_MAP.bitmap_size;
-		if(large_enough && page_frame.type == USABLE_PAGE) {
-			// Set all bits in frame (bitmap) to 1 (-1 is 0b11111111).
-			PHYS_MEMORY_MAP.bitmap = (uint8_t *) (page_frame.base);
-			memset(PHYS_MEMORY_MAP.bitmap, -1, PHYS_MEMORY_MAP.bitmap_size);
 
-			// Now that we're using this page for the bitmap, remove the used
-			// segment from the memory map.
-			memmap->memmap[i].base += PHYS_MEMORY_MAP.bitmap_size;
-			memmap->memmap[i].length = PHYS_MEMORY_MAP.bitmap_size;
-			found_page = true;
-			break;
-		}
+	int bmp_ind = FindMemEntryBySize(memmap, PHYS_MEMORY_MAP.bitmap_size);
+	if(bmp_ind == -1) {
+		return false;
 	}
 
-	if(! found_page) {
-		// Later on, make this into a panic.
-		for (;;) {
-			asm ("hlt");
-    	}
-	}
+	// Set all pages as used in bitmap.
+	PHYS_MEMORY_MAP.bitmap = (uint8_t*) memmap->memmap[bmp_ind].base;
+	memset(PHYS_MEMORY_MAP.bitmap, -1, PHYS_MEMORY_MAP.bitmap_size);
 
+	// Now set the usable ones as free (aside from the page containing the bmp).
 	for(int i = 0; i < memmap->entries; ++i) {
 		struct stivale2_mmap_entry page_frame = memmap->memmap[i];
-		if(page_frame.type == USABLE_PAGE) {
+		if(page_frame.type == USABLE_PAGE && i != bmp_ind) {
 			size_t starting_page = memmap->memmap[i].base / FRAME_SIZE;
 			size_t ending_page = starting_page + memmap->memmap[i].length / 
 								 FRAME_SIZE;
@@ -64,6 +49,8 @@ void InitPmm(struct stivale2_struct_tag_memmap *memmap)
 			}
 		}
 	}
+	
+	return true;
 }
 
 void *AllocFirstFrame() 
@@ -84,7 +71,18 @@ void *AllocFirstFrame()
 	return NULL;
 }
 
+void FreeFrame(void *frame)
+{
+	memset(frame, 0, FRAME_SIZE);
+	SetPageFree(ADDR_TO_FRAME_IND((uint64_t) frame));
+}
 
+
+/**
+ * Find the uppermost address in a memory map which is marked as usable.
+ * @input memmap A pointer to a memory map containing a list of pages.
+ * @output The highest address in the highest page which is marked as usable.
+ */
 static uint64_t UppermostUsableAddr(struct stivale2_struct_tag_memmap *memmap)
 {
 	uint64_t uppermost_usable_addr = 0;
@@ -98,6 +96,28 @@ static uint64_t UppermostUsableAddr(struct stivale2_struct_tag_memmap *memmap)
 		}
 	}
 	return uppermost_usable_addr;
+}
+
+/**
+ * Find an entry in the memory map large enough to hold a specific amount of 
+ * data.
+ * @input memmap The memory map to search for a sufficiently large entry.
+ * @input minimum_num_bytes The minimum number of bytes that the entry must
+ *							be able to hold.
+ * @output The index of an entry which satisfies these conditions, -1 if no
+ *		   such entry exists. 
+ */
+static int FindMemEntryBySize(struct stivale2_struct_tag_memmap *memmap,
+						   	  uint32_t minimum_num_bytes)
+{
+	for(int i = 0; i < memmap->entries; ++i) {
+		struct stivale2_mmap_entry page_frame = memmap->memmap[i];
+		bool large_enough = page_frame.length >= minimum_num_bytes;
+		if(large_enough && page_frame.type == USABLE_PAGE) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 /**

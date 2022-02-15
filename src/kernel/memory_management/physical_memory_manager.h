@@ -3,9 +3,12 @@
 
 #include "stivale2.h"
 #include "utils/misc.h"
+#include <stdbool.h>
 
-#define FRAME_SIZE 		4096
-#define USABLE_PAGE		1
+#define FRAME_SIZE 					4096
+#define ADDR_TO_FRAME_IND(addr) 	addr / FRAME_SIZE
+#define FRAME_TO_ADDR_IND(frame) 	frame * FRAME_SIZE
+#define USABLE_PAGE					1
 
 typedef struct {
 	uint64_t num_entries;
@@ -26,14 +29,19 @@ typedef struct {
  * Initialize the static MemMap instance given a stivale2 memmap.
  * @input memmap A pointer to a stivale2 memmap containing a list of PFs, their
  *				 types, and the number of entries.
+ * @output 0 for success, -1 for failure.
  */
-void InitPmm(struct stivale2_struct_tag_memmap *memmap);
+bool InitPmm(struct stivale2_struct_tag_memmap *memmap);
 
 /**
  * @output A pointer to the first unused page frame, NULL if none are available.
  */
 void *AllocFirstFrame();
 
-
+/**
+ * Free an allocated frame.
+ * @input frame an allocated piece page frame.
+ */
+void FreeFrame(void *frame);
 
 #endif
