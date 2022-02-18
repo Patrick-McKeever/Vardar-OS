@@ -1,7 +1,11 @@
 #ifndef VIRTUAL_MEMORY_MANAGER_H
 #define VIRTUAL_MEMORY_MANAGER_H
 
-#include "physical_memory_manager.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "memory_management/physical_memory_manager.h"
+#include "stivale2.h"
 
 // Page flags.
 #define PRESENT						0x0000000000000001
@@ -14,7 +18,7 @@
 #define PAGE_ATTRIBUTE_TABLE		0x0000000000000080
 #define GLOBAL						0x0000000000000f00
 
-
+// 512 entries per table, of 4KiB pages each.
 #define LOG2_ENTRIES_PER_TABLE		9
 #define LOG2_FRAME_SIZE				12
 #define MAX_PAGE_IND				0x1FF
@@ -35,103 +39,48 @@
 	& MAX_PAGE_IND
 
 
-static uint64_t *KERNEL_PAGE_TABLE_ROOT;
-
-static uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, int flags);
-static uint64_t *GetPageTable(uint64_t *parent, size_t index);
-void InitPageTable(uint64_t *page_table);
+void InitPageTable(uint64_t *page_table, 
+				   struct stivale2_struct_tag_memmap *memmap);
 
 bool MapPage(uint64_t *page_table_root, size_t vaddr, size_t paddr, 
-		 	 uint16_t flags)
+		 	 uint16_t flags);
+
+bool MapKernelPage(size_t vaddr, size_t paddr, uint16_t flags);
+
+bool UnmapPage(uint64_t *pagemap, size_t vaddr);
+
+bool UnmapKernelPage(size_t vaddr);
+
+bool RemapPage(uint64_t *table, size_t former_vaddr, size_t new_vaddr, 
+			   uint16_t flags);
+
+bool RemapKernelPage(size_t former_vaddr, size_t new_vaddr, uint16_t flags);
+
+uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr);
+
+uint64_t KernelVAddrToPAddr(uint64_t vaddr);
+
+bool GetPageFlag(uint64_t page, uint64_t flag);
+
+static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, 
+											 int flags)
 {
-	uint64_t *parent_table = page_table_root, child_table;
-	for(int i = 3; i >= 1; --i) {
-		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
-		uint64_t *child_table = GetOrCreatePageTable(parent_table, tab_index, 
-													 flags);
-		if(child_table == NULL)
-			return false;
-		parent_table = child_table;
-	}
+	if(GetPageFlag(parent[index], PRESENT))
+		return &parent[index];
 	
-	uint64_t entry = paddr | flags;
-	child_table[V_ADDR_INDEX(vaddr, 1)] = paddr | flags;
-	return true;
-}
-
-bool MapKernelPage(size_t vaddr, size_t paddr, uint16_t flags)
-{
-	return MapPage(KERNEL_PAGE_TABLE_ROOT, vaddr, paddr, flags);
-}
-
-bool UnmapPage(uint64_t *pagemap, size_t vaddr)
-{
-	uint64_t *parent_table = page_table_root, child_table;
-	for(int i = 3; i >= 1; --i) {
-		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
-		uint64_t *child_table = GetPageTable(parent_table, tab_index);
-		if(child_table == NULL)
-			return false;
-		parent_table = child_table;
+	void *free_frame = AllocFirstFrame();	
+	if(free_frame == NULL) {
+		return NULL;
 	}
-	child_table[V_ADDR_INDEX(vaddr, 1)] = 0;
-	__asm__ volatile("invlpg (%[pg_addr])" ::[pg_addr] "r" (vaddr));
-	return true;
+	parent[index] = ((uint64_t) free_frame) | flags;
+	return free_frame;
 }
 
-bool UnmapKernelPage(size_t vaddr)
+static inline uint64_t *GetPageTable(uint64_t *parent, size_t index)
 {
-	return UnmapPage(KERNEL_PAGE_TABLE_ROOT, vaddr);
-}
-
-bool RemapKernelPage(size_t former_vaddr, size_t new_vaddr, uint16_t flags)
-{
-	uint64_t paddr = KernelVAddrToPAddr(former_vaddr);
-	UnmapKernelPage(vaddr);
-	MapKernelPage(former_vaddr, paddr, flags);
-}
-
-uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr)
-{
-	uint64_t *parent_table = page_table_root, child_table;
-	for(int i = 3; i >= 1; --i) {
-		size_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
-		uint64_t *child_table = GetPageTable(parent_table, tab_index);
-		parent_table = child_table;
-	}
-	// Get rid of flags.
-	return (child_table[V_ADDR_INDEX(vaddr, 1)] & ~(0x1FF));
-}
-
-uint64_t KernelVAddrToPAddr(uint64_t vaddr)
-{
-	return VAddrToPadder(KERNEL_PAGE_TABLE_ROOT, vaddr);
-}
-
-void GetPageFlag(uint64_t page, uint64_t flag)
-{
-	return (page & flag) != 0;
-}
-
-static uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, int flags)
-{
-	if(GetPageFlag(parent[index], PRESENT)) {
-		void *free_frame = AllocFirstFrame();
-		if(free_frame == NULL) {
-			return NULL;
-		}
-		entry[index] = free_frame | flags;
-		return free_frame;
-	}
-
-	return &entry[index];
-}
-
-
-static uint64_t *GetPageTable(uint64_t *parent, size_t index)
-{
-	if(GetPageFlag(parent[index]), PRESENT)
-		return entry[index];
+	if(GetPageFlag(parent[index], PRESENT))
+		return &parent[index];
 	return NULL;
 }
+
 #endif
