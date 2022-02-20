@@ -55,6 +55,16 @@ static struct stivale2_struct_tag_framebuffer framebuffer = {
 		.next = (uintptr_t)&framebuffer_hdr_tag
 	}
 };
+
+//static struct stivale2_struct_tag_kernel_base_address base_addr {
+//    .tag = {
+//		.next = (uintptr_t) &framebuffer,
+//		.identifier = STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID
+//	},      // Identifier: 0x060d78874a2a8af0
+//    uint64_t physical_base_address;
+//    uint64_t virtual_base_address;
+//};
+
 // The stivale2 specification says we need to define a "header structure".
 // This structure needs to reside in the .stivale2hdr ELF section in order
 // for the bootloader to find it. We use this __attribute__ directive to
@@ -85,6 +95,7 @@ static struct stivale2_header stivale_hdr = {
     .tags = (uintptr_t)&framebuffer
 };
  
+
 // We will now write a helper function which will allow us to scan for tags
 // that we want FROM the bootloader (structure tags).
 void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
@@ -106,6 +117,7 @@ void *stivale2_get_tag(struct stivale2_struct *stivale2_struct, uint64_t id) {
         current_tag = (void *)current_tag->next;
     }
 }
+
 
 //#include "kernel/interrupts/idt.h"
 #include "interrupts/idt.h"
@@ -146,10 +158,6 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	InitPageTable(memmap);
 	
 	term_write("Hello world", 11);
-    for (;;) {
-        asm ("hlt");
-    }
-
 	font_obj.rgb = (RGB) {255, 0, 0};
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	ClearScreen((RGB) {0, 0, 0});

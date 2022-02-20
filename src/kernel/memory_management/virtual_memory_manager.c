@@ -16,39 +16,40 @@ static void PrintKernelRoot() {
 bool InitPageTable(struct stivale2_struct_tag_memmap *memmap)
 {
 	KERNEL_PAGE_TABLE_ROOT = AllocFirstFrame();
-	memset(KERNEL_PAGE_TABLE_ROOT, 0, 1024);
-	bool succ = true;
-	// Probably want to do sth with PAT here.
-	for(uint32_t i = 0; i < memmap->entries; ++i) {
-		uint64_t base = memmap->memmap[i].base;
-		uint64_t bound = base + memmap->memmap[i].length;
-		uint64_t type = memmap->memmap[i].type;
-		
-		switch(type) {
-		case STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE:
-			succ &= MapMultipleKernel(base, bound, 0, PRESENT);
-			break;
-		case STIVALE2_MMAP_FRAMEBUFFER:
-			succ &= MapMultipleKernel(base, bound, 0, PRESENT);
-		}
-	}
-	
-	PrintK("0x5F73000 MAPPED TO 0x%h\n\0", 
-			KernelVAddrToPAddr(0x5F73000));
+	__asm__ volatile("mov %%cr3, %%rax;"
+					 "mov %%rax, %0;" 
+					 : "=r" (KERNEL_PAGE_TABLE_ROOT)
+					 :);
+	//bool succ = true;
+	//// Probably want to do sth with PAT here.
+	//for(uint32_t i = 0; i < memmap->entries; ++i) {
+	//	uint64_t base = memmap->memmap[i].base;
+	//	uint64_t bound = base + memmap->memmap[i].length;
+	//	uint64_t type = memmap->memmap[i].type;
+	//	
+	//	switch(type) {
+	//	case STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE:
+	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
+	//		break;
+	//	case STIVALE2_MMAP_FRAMEBUFFER:
+	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
+	//	}
+	//}
+	//
+	//PrintK("0x5F73000 MAPPED TO 0x%h\n\0", 
+	//		KernelVAddrToPAddr(0x5F73000));
 
-	uint16_t kernel_mem = PRESENT | READ_WRITABLE;
-	uint64_t two_gb = 2*1024*1024*1024;
-	uint64_t four_gb = 2*two_gb;
-	succ &= MapMultipleKernel(0, four_gb, 0, kernel_mem);
-	succ &= MapMultipleKernel(0, two_gb, KERNEL_DATA, kernel_mem);
-	PrintKernelRoot();
-	succ &= MapMultipleKernel(0, two_gb, KERNEL_CODE, PRESENT);
-	PrintKernelRoot();
-	PrintK("Writing back page table\n\0");
-	__asm__ volatile("mov %0, %%cr3" :: 
-					 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
-	PrintK("Wrote back page table\n\0");
-	return succ;
+	//uint16_t kernel_mem = PRESENT | READ_WRITABLE;
+	//// Identity map 4GB.
+	//succ &= MapMultipleKernel(0, 0x100000000, 0, kernel_mem);
+	//// Map 2GB of kernel data, 2GB of kernel code.
+	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_DATA, kernel_mem);
+	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_CODE, PRESENT);
+	//PrintK("Writing back page table\n\0");
+	//__asm__ volatile("mov %0, %%cr3" :: 
+	//				 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
+	//PrintK("Wrote back page table\n\0");
+	return true;
 }
 
 bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr, 
