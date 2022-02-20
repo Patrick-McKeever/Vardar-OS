@@ -13,44 +13,103 @@ static void PrintKernelRoot() {
 	}
 }
 
-bool InitPageTable(struct stivale2_struct_tag_memmap *memmap)
+
+bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
+				   struct stivale2_struct_tag_kernel_base_address *kern_base_addr,
+				   struct stivale2_struct_tag_pmrs *pmrs)
 {
 	KERNEL_PAGE_TABLE_ROOT = AllocFirstFrame();
-	__asm__ volatile("mov %%cr3, %%rax;"
-					 "mov %%rax, %0;" 
-					 : "=r" (KERNEL_PAGE_TABLE_ROOT)
-					 :);
-	//bool succ = true;
-	//// Probably want to do sth with PAT here.
-	//for(uint32_t i = 0; i < memmap->entries; ++i) {
-	//	uint64_t base = memmap->memmap[i].base;
-	//	uint64_t bound = base + memmap->memmap[i].length;
-	//	uint64_t type = memmap->memmap[i].type;
-	//	
-	//	switch(type) {
-	//	case STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE:
-	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
-	//		break;
-	//	case STIVALE2_MMAP_FRAMEBUFFER:
-	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
-	//	}
-	//}
-	//
-	//PrintK("0x5F73000 MAPPED TO 0x%h\n\0", 
-	//		KernelVAddrToPAddr(0x5F73000));
+	if(KERNEL_PAGE_TABLE_ROOT == NULL)
+		return false;
+	
+	bool success = true;
 
-	//uint16_t kernel_mem = PRESENT | READ_WRITABLE;
-	//// Identity map 4GB.
-	//succ &= MapMultipleKernel(0, 0x100000000, 0, kernel_mem);
-	//// Map 2GB of kernel data, 2GB of kernel code.
-	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_DATA, kernel_mem);
-	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_CODE, PRESENT);
-	//PrintK("Writing back page table\n\0");
-	//__asm__ volatile("mov %0, %%cr3" :: 
-	//				 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
-	//PrintK("Wrote back page table\n\0");
-	return true;
+	// Because we requested fully virtual mappings, we cannot immediately calc-
+	// ulate the correspondence between a virtual higher-half address and a
+	// physical address using offsets. Instead, we accept that the kernel will
+	// be placed at some arbitrary physical address and mapped to some arbitrary
+	// virtual address, and trust that the bootloader will report them correctly.
+	uint64_t kern_phys_base = kern_base_addr->physical_base_address;
+	uint64_t kern_virt_base = kern_base_addr->virtual_base_address;
+	uint16_t kernel_mem = PRESENT | READ_WRITABLE;
+	
+	// Protected memory ranges (PMRs) describe ELF segments of kernel/code data,
+	// giving their location in physical/virtual memory as determined by the
+	// stivale2 bootloader.
+	for(uint64_t i = 0; i < pmrs->entries; ++i) {
+		struct stivale2_pmr pmr = pmrs->pmrs[i];
+		uint64_t virt = pmr.base;
+		uint64_t phys = kern_phys_base + (pmr.base - kern_virt_base);
+		uint64_t len  = pmr.length;
+	
+		// Map all page frames in PMR to a virtual address determined by the
+		// offset between the PMR's physical and virtual address. 
+		uint64_t offset	= virt - phys;
+		success &= MapMultipleKernel(phys, phys + len, offset, kernel_mem);
+	}
+
+	// Identity map 0x1000-4GiB.
+	success &= MapMultipleKernel(0x1000, 0x100000000, 0, kernel_mem);
+	// Map 0x1000-4GiB to higher half for kernel data.
+	success &= MapMultipleKernel(0x1000, 0x100000000, KERNEL_DATA, kernel_mem);
+	
+	for(uint32_t i = 0; i < memmap->entries; ++i) {
+		uint64_t base = memmap->memmap[i].base;
+		uint64_t bound = base + memmap->memmap[i].length;
+		//uint64_t type = memmap->memmap[i].type;
+
+		// If we already mapped this, continue.
+		if(bound <= 0x100000000)
+			continue;	
+		
+		success &= MapMultipleKernel(base, bound, 0, kernel_mem);
+		success &= MapMultipleKernel(base, bound, KERNEL_DATA, kernel_mem);
+	}
+
+	
+	__asm__ volatile("mov %0, %%cr3" :: 
+					 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
+	return success;
 }
+
+//bool InitPageTable(struct stivale2_struct_tag_memmap *memmap)
+//{
+//	KERNEL_PAGE_TABLE_ROOT = AllocFirstFrame();
+//	__asm__ volatile("mov %%cr3, %%rax;"
+//					 "mov %%rax, %0;" 
+//					 : "=r" (KERNEL_PAGE_TABLE_ROOT)
+//					 :);
+//	//bool succ = true;
+//	//// Probably want to do sth with PAT here.
+//	//for(uint32_t i = 0; i < memmap->entries; ++i) {
+//	//	uint64_t base = memmap->memmap[i].base;
+//	//	uint64_t bound = base + memmap->memmap[i].length;
+//	//	uint64_t type = memmap->memmap[i].type;
+//	//	
+//	//	switch(type) {
+//	//	case STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE:
+//	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
+//	//		break;
+//	//	case STIVALE2_MMAP_FRAMEBUFFER:
+//	//		succ &= MapMultipleKernel(base, bound, 0, PRESENT);
+//	//	}
+//	//}
+//	//
+//	//PrintK("0x5F73000 MAPPED TO 0x%h\n\0", 
+//	//		KernelVAddrToPAddr(0x5F73000));
+//
+//	//uint16_t kernel_mem = PRESENT | READ_WRITABLE;
+//	//// Identity map 4GB.
+//	//succ &= MapMultipleKernel(0, 0x100000000, 0, kernel_mem);
+//	//// Map 2GB of kernel data, 2GB of kernel code.
+//	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_DATA, kernel_mem);
+//	//succ &= MapMultipleKernel(0, 0x80000000, KERNEL_CODE, PRESENT);
+//	//PrintK("Writing back page table\n\0");
+//	//__asm__ volatile("mov %0, %%cr3" :: 
+//	//				 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
+//	//PrintK("Wrote back page table\n\0");
+//	return true;
+//}
 
 bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr, 
 		 	 uint16_t flags)

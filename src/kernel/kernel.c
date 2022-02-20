@@ -56,14 +56,19 @@ static struct stivale2_struct_tag_framebuffer framebuffer = {
 	}
 };
 
-//static struct stivale2_struct_tag_kernel_base_address base_addr {
-//    .tag = {
-//		.next = (uintptr_t) &framebuffer,
-//		.identifier = STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID
-//	},      // Identifier: 0x060d78874a2a8af0
-//    uint64_t physical_base_address;
-//    uint64_t virtual_base_address;
-//};
+static struct stivale2_struct_tag_kernel_base_address base_addr_tag = {
+    .tag = {
+		.next = (uintptr_t) &framebuffer,
+		.identifier = STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID
+	}
+};
+
+static struct stivale2_struct_tag_pmrs pmr_tag = {
+	.tag = {
+		.next = (uintptr_t) &base_addr_tag,
+		.identifier = STIVALE2_STRUCT_TAG_PMRS_ID
+	}
+};
 
 // The stivale2 specification says we need to define a "header structure".
 // This structure needs to reside in the .stivale2hdr ELF section in order
@@ -92,7 +97,7 @@ static struct stivale2_header stivale_hdr = {
     .flags = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4),
     // This header structure is the root of the linked list of header tags and
     // points to the first one in the linked list.
-    .tags = (uintptr_t)&framebuffer
+    .tags = (uintptr_t)&pmr_tag
 };
  
 
@@ -141,12 +146,17 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 	struct stivale2_struct_tag_memmap *memmap;
 	memmap = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
+
+	struct stivale2_struct_tag_kernel_base_address *kern_base_addr;
+	kern_base_addr = stivale2_get_tag(stivale2_struct,
+									  STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
+	struct stivale2_struct_tag_pmrs *pmrs;
+	pmrs = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_PMRS_ID);
 	
 	struct stivale2_struct_tag_terminal *term_str_tag;
     term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
 	void *term_write_ptr = (void*) term_str_tag->term_write;
 	term_write = term_write_ptr;
-	uint64_t a = 0x1234567890ABCDEF;
 	//term_write("Hello world", 11);
 
 	// Temporary.
@@ -155,11 +165,9 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 	InitPmm(memmap);
-	InitPageTable(memmap);
+	InitPageTable(memmap, kern_base_addr, pmrs);
 	
-	term_write("Hello world", 11);
 	font_obj.rgb = (RGB) {255, 0, 0};
-	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	ClearScreen((RGB) {0, 0, 0});
 	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");

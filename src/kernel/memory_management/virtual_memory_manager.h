@@ -43,7 +43,9 @@
 	& MAX_PAGE_IND
 
 
-bool InitPageTable(struct stivale2_struct_tag_memmap *memmap);
+bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
+				   struct stivale2_struct_tag_kernel_base_address *kern_base_addr,
+				   struct stivale2_struct_tag_pmrs *pmrs);
 
 bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr, 
 		 	 uint16_t flags);
