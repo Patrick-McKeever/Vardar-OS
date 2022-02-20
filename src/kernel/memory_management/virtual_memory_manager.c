@@ -5,8 +5,9 @@
 static uint64_t *KERNEL_PAGE_TABLE_ROOT;
 
 static void PrintKernelRoot() {
+	uint64_t *root =GetPageTable(KERNEL_PAGE_TABLE_ROOT, 0);
 	for(int i = 0; i < 128; ++i) {
-		PrintK("Entry %d: 0x%h\t\0", i, KERNEL_PAGE_TABLE_ROOT[i]);
+		PrintK("Entry %d: 0x%h\t\0", i, root[i]);
 		if(i % 8 == 0)
 			PrintK("\n\0");
 	}
@@ -14,9 +15,9 @@ static void PrintKernelRoot() {
 
 bool InitPageTable(struct stivale2_struct_tag_memmap *memmap)
 {
-	memset(KERNEL_PAGE_TABLE_ROOT, 0, 512 * 8);
+	KERNEL_PAGE_TABLE_ROOT = AllocFirstFrame();
+	memset(KERNEL_PAGE_TABLE_ROOT, 0, 1024);
 	bool succ = true;
-	PrintKernelRoot();
 	// Probably want to do sth with PAT here.
 	for(uint32_t i = 0; i < memmap->entries; ++i) {
 		uint64_t base = memmap->memmap[i].base;
@@ -31,9 +32,12 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap)
 			succ &= MapMultipleKernel(base, bound, 0, PRESENT);
 		}
 	}
+	
+	PrintK("0x5F73000 MAPPED TO 0x%h\n\0", 
+			KernelVAddrToPAddr(0x5F73000));
 
 	uint16_t kernel_mem = PRESENT | READ_WRITABLE;
-	uint64_t two_gb = 2*1024*1024;
+	uint64_t two_gb = 2*1024*1024*1024;
 	uint64_t four_gb = 2*two_gb;
 	succ &= MapMultipleKernel(0, four_gb, 0, kernel_mem);
 	succ &= MapMultipleKernel(0, two_gb, KERNEL_DATA, kernel_mem);
@@ -51,8 +55,8 @@ bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr,
 		 	 uint16_t flags)
 {
 	uint64_t *parent_table = page_table_root, *child_table;
-	for(int i = 3; i >= 1; --i) {
-		uint64_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
+	for(int i = 4; i > 1; --i) {
+		uint64_t tab_index = V_ADDR_INDEX(vaddr, i);
 		uint64_t *child_table = GetOrCreatePageTable(parent_table, tab_index, 
 													 flags);
 		if(child_table == NULL)
@@ -60,7 +64,7 @@ bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr,
 		parent_table = child_table;
 	}
 	
-	child_table[V_ADDR_INDEX(vaddr, 1)] = paddr | flags;
+	parent_table[V_ADDR_INDEX(vaddr, 1)] = paddr | flags;
 	return true;
 }
 
@@ -90,15 +94,15 @@ bool MapKernelPage(uint64_t vaddr, uint64_t paddr, uint16_t flags)
 bool UnmapPage(uint64_t *page_table_root, uint64_t vaddr)
 {
 	uint64_t *parent_table = page_table_root, *child_table;
-	for(int i = 3; i >= 1; --i) {
-		uint64_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
+	for(int i = 4; i > 1; --i) {
+		uint64_t tab_index = V_ADDR_INDEX(vaddr, i);
 		child_table = GetPageTable(parent_table, tab_index);
 		if(child_table == NULL)
 			return false;
 		parent_table = child_table;
 	}
 
-	child_table[V_ADDR_INDEX(vaddr, 1)] = 0;
+	parent_table[V_ADDR_INDEX(vaddr, 1)] = 0;
 	__asm__ volatile("invlpg (%[pg_addr])" ::[pg_addr] "r" (vaddr));
 	return true;
 }
@@ -128,8 +132,8 @@ bool RemapKernelPage(uint64_t former_vaddr, uint64_t new_vaddr, uint16_t flags)
 uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr)
 {
 	uint64_t *parent_table = table, *child_table;
-	for(int i = 3; i >= 1; --i) {
-		uint64_t tab_index = V_ADDR_INDEX(vaddr, i + 1);
+	for(int i = 4; i > 1; --i) {
+		uint64_t tab_index = V_ADDR_INDEX(vaddr, i);
 		child_table = GetPageTable(parent_table, tab_index);
 		parent_table = child_table;
 	}
