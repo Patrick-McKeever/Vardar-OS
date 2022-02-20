@@ -5,7 +5,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "memory_management/physical_memory_manager.h"
+#include "utils/printf.h"
 #include "stivale2.h"
+
+#define KERNEL_DATA					0xffff800000000000
+#define KERNEL_CODE					0xffffffff80000000
 
 // Page flags.
 #define PRESENT						0x0000000000000001
@@ -39,22 +43,27 @@
 	& MAX_PAGE_IND
 
 
-void InitPageTable(uint64_t *page_table, 
-				   struct stivale2_struct_tag_memmap *memmap);
+bool InitPageTable(struct stivale2_struct_tag_memmap *memmap);
 
-bool MapPage(uint64_t *page_table_root, size_t vaddr, size_t paddr, 
+bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr, 
 		 	 uint16_t flags);
 
-bool MapKernelPage(size_t vaddr, size_t paddr, uint16_t flags);
+bool MapKernelPage(uint64_t vaddr, uint64_t paddr, uint16_t flags);
 
-bool UnmapPage(uint64_t *pagemap, size_t vaddr);
+bool MapMultiple(uint64_t *page_table_root, uint64_t base, uint64_t bound,
+				 uint64_t offset, uint16_t flags);
 
-bool UnmapKernelPage(size_t vaddr);
+bool MapMultipleKernel(uint64_t base, uint64_t bound, uint64_t offset, 
+					   uint16_t flags);
 
-bool RemapPage(uint64_t *table, size_t former_vaddr, size_t new_vaddr, 
+bool UnmapPage(uint64_t *pagemap, uint64_t vaddr);
+
+bool UnmapKernelPage(uint64_t vaddr);
+
+bool RemapPage(uint64_t *table, uint64_t former_vaddr, uint64_t new_vaddr, 
 			   uint16_t flags);
 
-bool RemapKernelPage(size_t former_vaddr, size_t new_vaddr, uint16_t flags);
+bool RemapKernelPage(uint64_t former_vaddr, uint64_t new_vaddr, uint16_t flags);
 
 uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr);
 
@@ -62,25 +71,32 @@ uint64_t KernelVAddrToPAddr(uint64_t vaddr);
 
 bool GetPageFlag(uint64_t page, uint64_t flag);
 
-static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, size_t index, 
-											 int flags)
+static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, uint64_t index, 
+											 uint16_t flags)
 {
+	//PrintK("GetOrCreatePageTable: Getting %hth table from parent at addr %h\n\0", 
+	//		index, (uint64_t) parent);
+
 	if(GetPageFlag(parent[index], PRESENT))
-		return &parent[index];
+		return (uint64_t*) (parent[index] & ~(511));
 	
 	void *free_frame = AllocFirstFrame();	
 	if(free_frame == NULL) {
 		return NULL;
 	}
+
+	//PrintK("GetOrCreatePageTable: Table not found, allocated table at addr %h\n\0",
+//			(uint64_t) free_frame);
 	parent[index] = ((uint64_t) free_frame) | flags;
 	return free_frame;
 }
 
-static inline uint64_t *GetPageTable(uint64_t *parent, size_t index)
+static inline uint64_t *GetPageTable(uint64_t *parent, uint64_t index)
 {
 	if(GetPageFlag(parent[index], PRESENT))
-		return &parent[index];
+		return (uint64_t*) (parent[index] & ~(511));
 	return NULL;
 }
 
 #endif
+

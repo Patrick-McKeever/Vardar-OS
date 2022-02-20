@@ -56,6 +56,12 @@ run:
 	../limine/limine-install bin/image.iso
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -d int -M smm=off -D ./log.txt
 	
+run-no-shutdown:
+	cp -v kernel.elf limine.cfg iso_root/
+	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
+	../limine/limine-install bin/image.iso
+	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -no-reboot -no-shutdown -d int -M smm=off -D ./log.txt
+
 debug:
 	cp -v kernel.elf limine.cfg iso_root/                                       
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso 

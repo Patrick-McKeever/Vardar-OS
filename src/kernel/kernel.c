@@ -30,13 +30,6 @@ static struct stivale2_header_tag_terminal terminal_hdr_tag = {
 };
 
 
-//static struct stivale2_header_tag_memmap memmap_tag = {
-//	.tag = {
-//		.identifier = STIVALE2_STRUCT_TAG_MEMMAP_ID,
-//		.next = (uint64_t) &terminal_hdr_tag
-//	}
-//};
-
 // We are now going to define a framebuffer header tag.
 // This tag tells the bootloader that we want a graphical framebuffer instead
 // of a CGA-compatible text mode. Omitting this tag will make the bootloader
@@ -47,7 +40,6 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
         // Instead of 0, we now point to the previous header tag. The order in
         // which header tags are linked does not matter.
-        //.next = (uint64_t)&memmap_tag
 		.next = (uint64_t) &terminal_hdr_tag
     },
     // We set all the framebuffer specifics to 0 as we want the bootloader
@@ -126,22 +118,39 @@ static Font *global_font;
 //static GraphicsCtx *global_ctx;
 #include "graphics/terminal.h"
 #include "memory_management/physical_memory_manager.h"
+#include "memory_management/virtual_memory_manager.h"
+#include "utils/printf.h"
 Terminal term;
+
+void (*term_write)(const char *string, size_t length);
 
 void _start(struct stivale2_struct *stivale2_struct) {
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 	struct stivale2_struct_tag_memmap *memmap;
 	memmap = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
+	
+	struct stivale2_struct_tag_terminal *term_str_tag;
+    term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+	void *term_write_ptr = (void*) term_str_tag->term_write;
+	term_write = term_write_ptr;
+	uint64_t a = 0x1234567890ABCDEF;
+	//term_write("Hello world", 11);
 
+	// Temporary.
 	InitGraphicsCtx(fb);
 	//global_ctx = &ctx;
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 	InitPmm(memmap);
+	InitPageTable(memmap);
+	
+	term_write("Hello world", 11);
+    for (;;) {
+        asm ("hlt");
+    }
 
 	font_obj.rgb = (RGB) {255, 0, 0};
-	char success[] = "SUCCESS";
 	//PrintStr(&ctx, &font_obj, (Coordinate) {90, 90}, success);
 	ClearScreen((RGB) {0, 0, 0});
 	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
