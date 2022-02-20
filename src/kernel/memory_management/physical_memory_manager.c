@@ -1,5 +1,6 @@
 #include "physical_memory_manager.h"
 #include "utils/string.h"
+#include "utils/printf.h"
 #include <stddef.h>
 
 static MemMap PHYS_MEMORY_MAP;
@@ -24,6 +25,7 @@ bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 	// to hold the bitmap - hence, we round up to the nearest multiple of the
 	// page size (4KiB).
 	uint32_t bitmap_size = uppermost_usable_addr / FRAME_SIZE / 8;
+	PHYS_MEMORY_MAP.num_entries = uppermost_usable_addr / FRAME_SIZE;
 	PHYS_MEMORY_MAP.bitmap_size = RoundToNearestMultiple(bitmap_size, 
 														 FRAME_SIZE);
 	PHYS_MEMORY_MAP.uppermost_addr = uppermost_usable_addr;	
@@ -55,7 +57,7 @@ bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 
 void *AllocFirstFrame() 
 {
-	for(int i = 0; i < PHYS_MEMORY_MAP.bitmap_size; ++i) {
+	for(int i = 0; i < PHYS_MEMORY_MAP.num_entries; ++i) {
 		if(! PageIsUsed(i)) {
 			SetPageUsed(i);
 			void *frame = (void*)((size_t) i * FRAME_SIZE);
@@ -77,6 +79,14 @@ void FreeFrame(void *frame)
 	SetPageFree(ADDR_TO_FRAME_IND((uint64_t) frame));
 }
 
+int NumFreeFrames()
+{
+	int free_frames = 0;
+	for(int i = 0; i < PHYS_MEMORY_MAP.num_entries; ++i) {
+		free_frames += ! PageIsUsed(i);
+	}
+	return free_frames;
+}
 
 /**
  * Find the uppermost address in a memory map which is marked as usable.

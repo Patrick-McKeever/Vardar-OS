@@ -47,6 +47,9 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 				   struct stivale2_struct_tag_kernel_base_address *kern_base_addr,
 				   struct stivale2_struct_tag_pmrs *pmrs);
 
+uint64_t *GetPage(uint64_t *page_table_root, uint64_t vaddr);
+uint64_t *GetKernelPage(uint64_t vaddr);
+
 bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr, 
 		 	 uint16_t flags);
 
@@ -72,6 +75,10 @@ uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr);
 uint64_t KernelVAddrToPAddr(uint64_t vaddr);
 
 bool GetPageFlag(uint64_t page, uint64_t flag);
+
+void PrintPageAttrs(uint64_t *page_table_root, uint64_t virt_addr);
+
+void PrintKernelPageAttrs(uint64_t virt_addr);
 
 static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, uint64_t index, 
 											 uint16_t flags)

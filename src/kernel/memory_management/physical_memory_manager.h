@@ -44,4 +44,9 @@ void *AllocFirstFrame();
  */
 void FreeFrame(void *frame);
 
+/**
+ * @return The number of page frames which are free for use.
+ */
+int NumFreeFrames();
+
 #endif
