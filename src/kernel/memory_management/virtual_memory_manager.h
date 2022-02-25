@@ -12,15 +12,15 @@
 #define KERNEL_CODE					0xffffffff80000000
 
 // Page flags.
-#define PRESENT						0x0000000000000001
-#define READ_WRITABLE				0x0000000000000002
-#define USER_ACCESSIBLE				0x0000000000000004
-#define WRITE_THROUGH				0x0000000000000008
-#define CACHE_DISABLED				0x0000000000000010
-#define ACCESSED					0x0000000000000020
-#define DIRTY						0x0000000000000040
-#define PAGE_ATTRIBUTE_TABLE		0x0000000000000080
-#define GLOBAL						0x0000000000000f00
+#define PRESENT						(1)
+#define READ_WRITABLE				(1 << 1)
+#define USER_ACCESSIBLE				(1 << 2)	
+#define WRITE_THROUGH				(1 << 3)	
+#define CACHE_DISABLED				(1 << 4)	
+#define ACCESSED					(1 << 5)	
+#define DIRTY						(1 << 6)	
+#define PAGE_ATTRIBUTE_TABLE		(1 << 7)	
+#define GLOBAL						(1 << 8)	
 
 // 512 entries per table, of 4KiB pages each.
 #define LOG2_ENTRIES_PER_TABLE		9
@@ -64,6 +64,7 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
  * entry corresponding to this address.
  * @input page_table_root Ptr to PML4 table.
  * @input vaddr The virtual address to lookup.
+ * @input create Should the entry be created if it does not exist (t/f)?
  * @output A pointer to the virtual address' entry in the bottom-level page 
  * 		   table.
  */
@@ -76,6 +77,16 @@ uint64_t *GetPage(uint64_t *page_table_root, uint64_t vaddr);
  * @output A pointer to the virtual address' entry in the kernel's page table.
  */
 uint64_t *GetKernelPage(uint64_t vaddr);
+
+/**
+ * Given a PML4 and a virtual address, create a page table entry for said vaddr
+ * and retur a ptr to it.
+ * @input page_table_root The PML4 to query/edit.
+ * @output Ptr to created page table entry if PMM alloc succeeded, NULL 
+ * 		   otherwise.
+ */
+uint64_t *CreatePage(uint64_t *page_table_root, uint64_t vaddr, 
+					 uint16_t flags);
 
 /**
  * Given a PML4 table, map a vaddr to a paddr within that table and set its 
@@ -188,46 +199,6 @@ void PrintPageAttrs(uint64_t *page_table_root, uint64_t virt_addr);
  * Identical to PrintPageAttrs, but uses kernel page table by default.
  */
 void PrintKernelPageAttrs(uint64_t virt_addr);
-
-/**
- * Look up the index-th entry of nth-level page table parent. If this entry has 
- * been set, return the pointer to the corresponding (n+1)th level page table.
- * If not, allocate the (n+1)th level page table, create an entry for it, and
- * return a ptr to it.
- * @input parent The parent of the page table to create/retrieve.
- * @input index The index of the page table to lookup.
- * @input flags The flags to be set for this page table if it must be created.
- * @output A pointer to the page table if PMM allocation succeeded, NULL 
- * 		   otherwise.
- */
-static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, uint64_t index, 
-											 uint16_t flags)
-{
-	if(GetPageFlag(parent[index], PRESENT))
-		return (uint64_t*) (parent[index] & ~(511));
-	
-	void *free_frame = AllocFirstFrame();	
-	if(free_frame == NULL) {
-		return NULL;
-	}
-
-	parent[index] = ((uint64_t) free_frame) | flags;
-	return free_frame;
-}
-
-/**
- * Given a page table and an index, return the page table pointed to by the
- * index-th entry if it exists, otherwise return NULL.
- * @input parent The parent of the page table to retrieve.
- * @input index The index of the page table to retrieve.
- * @output A pointer to the page table if it exists, otherwise NULL.
- */
-static inline uint64_t *GetPageTable(uint64_t *parent, uint64_t index)
-{
-	if(GetPageFlag(parent[index], PRESENT))
-		return (uint64_t*) (parent[index] & ~(511));
-	return NULL;
-}
 
 #endif
 
