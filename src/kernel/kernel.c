@@ -70,6 +70,13 @@ static struct stivale2_struct_tag_pmrs pmr_tag = {
 	}
 };
 
+static struct stivale2_struct_tag_rsdp rsdp_tag = {
+	.tag = {
+		.next = (uintptr_t) &pmr_tag,
+		.identifier = STIVALE2_STRUCT_TAG_RSDP_ID
+	}
+};
+
 // The stivale2 specification says we need to define a "header structure".
 // This structure needs to reside in the .stivale2hdr ELF section in order
 // for the bootloader to find it. We use this __attribute__ directive to
@@ -97,7 +104,8 @@ static struct stivale2_header stivale_hdr = {
     .flags = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4),
     // This header structure is the root of the linked list of header tags and
     // points to the first one in the linked list.
-    .tags = (uintptr_t)&pmr_tag
+    .tags = (uintptr_t)&rsdp_tag
+	//.tags = (uintptr_t)&pmr_tag
 };
  
 
@@ -172,7 +180,6 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
-	//Transpose((Coordinate){0,0}, (Dimensions){100,100}, 100; 100);
 	WriteBack();
 	InitializeIdt();
 	SetKeystrokeConsumer(&HandleKeyStroke);
