@@ -145,6 +145,7 @@ static Font *global_font;
 #include "memory_management/physical_memory_manager.h"
 #include "memory_management/virtual_memory_manager.h"
 #include "utils/printf.h"
+#include "acpi/acpi.h"
 Terminal term;
 
 void (*term_write)(const char *string, size_t length);
@@ -163,6 +164,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	
 	struct stivale2_struct_tag_terminal *term_str_tag;
     term_str_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_TERMINAL_ID);
+	struct stivale2_struct_tag_rsdp *rsdp_addr_tag;
+	rsdp_addr_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
 	void *term_write_ptr = (void*) term_str_tag->term_write;
 	term_write = term_write_ptr;
 	//term_write("Hello world", 11);
@@ -183,7 +186,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	WriteBack();
 	InitializeIdt();
 	SetKeystrokeConsumer(&HandleKeyStroke);
-	
+	//InitAcpi(*rsdp_addr_tag);
+
     for (;;) {
         asm ("hlt");
     }
