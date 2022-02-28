@@ -7,6 +7,7 @@ IoApicList ParseMadt()
 {
 	MADT = (Madt*) FindTable("APIC");
 	IoApicList apic_list;
+	apic_list.num_apics = 0;
 	apic_list.io_apics = AllocFirstFrame();
 	int madt_len = MADT->header.length;
 	
