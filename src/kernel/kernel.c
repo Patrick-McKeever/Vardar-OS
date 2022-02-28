@@ -170,12 +170,15 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	term_write = term_write_ptr;
 	//term_write("Hello world", 11);
 
+
 	// Temporary.
 	InitGraphicsCtx(fb);
 	//global_ctx = &ctx;
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 	InitPmm(memmap);
+	AcpiTables apics;
+	InitAcpi(*rsdp_addr_tag, &apics);
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	
 	font_obj.rgb = (RGB) {255, 0, 0};
@@ -186,7 +189,6 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	WriteBack();
 	InitializeIdt();
 	SetKeystrokeConsumer(&HandleKeyStroke);
-	//InitAcpi(*rsdp_addr_tag);
 
     for (;;) {
         asm ("hlt");

@@ -11,10 +11,9 @@ typedef struct {
 	uint8_t checksum;
 	char oemid[6];
 	char oem_table[8];
+	uint32_t oem_revision;
 	uint32_t creator_id;
 	uint32_t creator_revision;
 } __attribute__((packed)) SdtHeader;
-
-bool ValidateSdtChecksum(SdtHeader *sdt);
 
 #endif

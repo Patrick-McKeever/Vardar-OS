@@ -15,20 +15,19 @@
 typedef void* AcpiTable;
 
 typedef struct {
+	// V1.
 	char signature[8];
 	uint8_t checksum;
 	char oemid[6];
 	uint8_t revision;
 	uint32_t rsdt_addr;
-} __attribute__((packed)) RsdpV1Descriptor;
-
-typedef struct {
-	RsdpV1Descriptor v1_desc;
+	
+	// V2.
 	uint32_t length;
 	uint64_t xsdt_addr;
 	uint8_t extended_checksum;
 	uint8_t reserved[3];
-} __attribute__((packed)) RsdpV2Descriptor;
+} __attribute__((packed)) RsdpDescriptor;
 
 // Give this one a non-typedef-ed name because of circular dependency w/
 // madt.h
@@ -45,30 +44,40 @@ struct SdtHeader {
 
 typedef struct {
 	SdtHeader header;
-	uint32_t *next;
+	uint32_t next[];
 } __attribute__((packed)) Rsdt;
 
 typedef struct {
 	SdtHeader header;
-	uint64_t *next;
+	uint64_t next[];
 } __attribute__((packed)) Xsdt;
 
+typedef union {
+	SdtHeader header;
+	// It thinks of these as addresses. Really, they're 32-bit ints. 
+	union {
+		uint32_t *rsdt_next;
+		uint64_t *xsdt_next;
+	};
+} __attribute__((packed)) XsdtOrRsdt;
+
 typedef struct {
-	bool uses_xsdt;
 	SdtHeader header;
 	union {
 		uint32_t *rsdt_next;
 		uint64_t *xsdt_next;
 	};
+	bool uses_xsdt;
 } __attribute__((packed)) GenericSdt;
 
 typedef struct {
 	IoApicList apic_list;
 } __attribute__((packed)) AcpiTables;
 
-AcpiTables InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag);
+int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag,
+			 AcpiTables *acpi_tabs);
 
-SdtHeader *FindTable(char *table_id);
+AcpiTable FindTable(char *table_id);
 
 /**
  * Initialize the static RSDP_TABLE field given a bootloader tag specifying its

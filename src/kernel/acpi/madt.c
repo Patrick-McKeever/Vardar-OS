@@ -18,7 +18,7 @@ IoApicList ParseMadt()
 	// 		- 16-bit record header giving record type (byte 1) and len (byte 2);
 	// 		- a variable length record body, whose length and form are
 	// 		  determined by value in record header.
-	uint8_t *madt_record_base = (uint8_t*) (MADT + MADT_RECORDS_OFFSET);
+	uint8_t *madt_record_base = ((uint8_t*) MADT + MADT_RECORDS_OFFSET);
 	uint8_t *record, record_type, record_len;
 	for(int i = 0; (MADT_RECORDS_OFFSET + i) < madt_len; i += record_len) {
 		record 		= (madt_record_base + i);

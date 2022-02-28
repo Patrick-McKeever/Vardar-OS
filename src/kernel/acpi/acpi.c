@@ -1,19 +1,25 @@
 #include "acpi.h"
 #include "utils/string.h"
 
-static RsdpV2Descriptor RSDP_TABLE;
-static GenericSdt SDT_HEAD;
-static bool ValidateRsdpChecksum(RsdpV1Descriptor *rsdp_tab);
 
-AcpiTables InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag)
+static RsdpDescriptor RSDP_TABLE;
+static GenericSdt SDT_HEAD;
+static bool ValidateRsdpChecksum(RsdpDescriptor *rsdp_tab);
+static bool ValidateSdtChecksum(AcpiTable generic_sdt, int len);
+
+int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag,
+			 AcpiTables *acpi_tabs)
 {
-	AcpiTables acpi_tabs;
-	InitRsdp(rsdp_addr_tag);
-	acpi_tabs.apic_list = ParseMadt();
-	return acpi_tabs;
+	if(! InitRsdp(rsdp_addr_tag))
+		return -1;
+	InitSdt();
+	acpi_tabs->apic_list = ParseMadt();
+	return 0;
 }
 
-SdtHeader *FindTable(char *table_id)
+// FindTable fails when trying to find "APIC" signature (i.e. MADT).
+// Resolve tomorrow.
+AcpiTable FindTable(char *table_id)
 {
 	uint8_t entry_size = SDT_HEAD.uses_xsdt ? 8 : 4;
 	int num_entries = (SDT_HEAD.header.length - sizeof(SDT_HEAD.header)) /
@@ -21,12 +27,13 @@ SdtHeader *FindTable(char *table_id)
 		
 	for(int i = 0; i < num_entries; ++i) {
 		SdtHeader *sdt = (SdtHeader *) (SDT_HEAD.uses_xsdt ? 
-										SDT_HEAD.xsdt_next[i] : 
-										SDT_HEAD.rsdt_next[i]);
+										 SDT_HEAD.xsdt_next[i] : 
+										 SDT_HEAD.rsdt_next[i]);
 		
 		bool signatures_match = strncmp(sdt->signature, table_id, 4) == 0;
-		if(signatures_match && ValidateSdtChecksum(sdt)) {
-			return sdt;	
+		bool valid_checksum = ValidateSdtChecksum((AcpiTable) sdt, sdt->length);
+		if(signatures_match && valid_checksum) {
+			return (AcpiTable) sdt;	
 		}		
 	}
 	
@@ -35,9 +42,9 @@ SdtHeader *FindTable(char *table_id)
 
 bool InitRsdp(struct stivale2_struct_tag_rsdp rsdp_addr_tag)
 {
-	RSDP_TABLE = *((RsdpV2Descriptor*) rsdp_addr_tag.rsdp);
+	RSDP_TABLE = *((RsdpDescriptor*) rsdp_addr_tag.rsdp);
 
-	if(ValidateRsdpChecksum(&RSDP_TABLE.v1_desc)) {
+	if(ValidateRsdpChecksum(&RSDP_TABLE)) {
 		return true;
 	}
 	
@@ -46,26 +53,28 @@ bool InitRsdp(struct stivale2_struct_tag_rsdp rsdp_addr_tag)
 
 bool InitSdt()
 {
-	SDT_HEAD.uses_xsdt = RSDP_TABLE.v1_desc.revision >= ACPI_VERSION_2;
-	
+	SDT_HEAD.uses_xsdt = RSDP_TABLE.revision >= ACPI_VERSION_2;
+	bool validated;
 	if(SDT_HEAD.uses_xsdt) {
-		Xsdt xsdt_tab = *((Xsdt*) RSDP_TABLE.xsdt_addr);
-		SDT_HEAD.header = xsdt_tab.header;
-		SDT_HEAD.xsdt_next = xsdt_tab.next;
+		Xsdt *xsdt_tab = ((Xsdt*) (uintptr_t) RSDP_TABLE.xsdt_addr);
+		validated = ValidateSdtChecksum((void*) xsdt_tab, xsdt_tab->header.length);
+		SDT_HEAD.header = xsdt_tab->header;
+		SDT_HEAD.xsdt_next = xsdt_tab->next;
 	} else {
-		Rsdt rsdt_tab = *((Rsdt*) (uintptr_t) RSDP_TABLE.v1_desc.rsdt_addr);
-		SDT_HEAD.header = rsdt_tab.header;
-		SDT_HEAD.rsdt_next = rsdt_tab.next;	
+		Rsdt *rsdt_tab = ((Rsdt*) (uintptr_t) RSDP_TABLE.rsdt_addr);
+		validated = ValidateSdtChecksum((void*) rsdt_tab, rsdt_tab->header.length);
+		SDT_HEAD.header = rsdt_tab->header;
+		SDT_HEAD.rsdt_next = rsdt_tab->next;
 	}
 	
-	if(ValidateSdtChecksum(&SDT_HEAD.header)) {
+	if(validated) {
 		return true;
 	}
 
 	return false;
 }
 
-static bool ValidateRsdpChecksum(RsdpV1Descriptor *rsdp_tab) 
+static bool ValidateRsdpChecksum(RsdpDescriptor *rsdp_tab) 
 {
 	int checksum = 0;
 	uint8_t *rsdp_bytes = (uint8_t *) rsdp_tab;
@@ -75,7 +84,7 @@ static bool ValidateRsdpChecksum(RsdpV1Descriptor *rsdp_tab)
 	}
 
 	// Checksums are valid if lower byte is all set to 0.
-	bool v1_valid = checksum && 0xff == 0x00;
+	bool v1_valid = (checksum & 0xff) == 0x00;
 	if(rsdp_tab->revision == ACPI_VERSION_1)	{
 		return v1_valid;
 	}
@@ -84,7 +93,19 @@ static bool ValidateRsdpChecksum(RsdpV1Descriptor *rsdp_tab)
 		checksum += rsdp_bytes[i];
 	}
 	
-	bool v2_valid = checksum && 0xff == 0x00;
+	bool v2_valid = (checksum & 0xff) == 0x00;
 	return v1_valid && v2_valid;	
 }
 
+static bool ValidateSdtChecksum(AcpiTable sdt, int len)
+{
+	int checksum = 0;
+
+	// First byte is actually a bool telling us if this is XSDT or RSDT. All
+	// subsequent bytes are identical to the RSDT/XSDT from memory.
+	uint8_t *sdt_bytes = (uint8_t *) (sdt);
+	for(int i = 0; i < len; ++i) {
+		checksum += sdt_bytes[i];
+	}
+	return (checksum & 0xff) == 0x00;
+}
