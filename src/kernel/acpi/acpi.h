@@ -77,6 +77,7 @@ typedef struct {
 int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag,
 			 AcpiTables *acpi_tabs);
 
+IoApicList GetIoApics();
 AcpiTable FindTable(char *table_id);
 
 /**

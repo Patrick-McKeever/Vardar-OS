@@ -29,6 +29,13 @@ static struct stivale2_header_tag_terminal terminal_hdr_tag = {
     .flags = 0
 };
 
+static struct stivale2_header_tag_smp smp_hdr_tag = {
+    .tag = {
+		.identifier = STIVALE2_HEADER_TAG_SMP_ID,
+		.next = (uintptr_t) &terminal_hdr_tag,
+	},
+	.flags = 0
+};
 
 // We are now going to define a framebuffer header tag.
 // This tag tells the bootloader that we want a graphical framebuffer instead
@@ -40,7 +47,7 @@ static struct stivale2_header_tag_framebuffer framebuffer_hdr_tag = {
         .identifier = STIVALE2_HEADER_TAG_FRAMEBUFFER_ID,
         // Instead of 0, we now point to the previous header tag. The order in
         // which header tags are linked does not matter.
-		.next = (uint64_t) &terminal_hdr_tag
+		.next = (uintptr_t) &smp_hdr_tag
     },
     // We set all the framebuffer specifics to 0 as we want the bootloader
     // to pick the best it can.
@@ -146,6 +153,7 @@ static Font *global_font;
 #include "memory_management/virtual_memory_manager.h"
 #include "utils/printf.h"
 #include "acpi/acpi.h"
+#include "hal/cpu_init.h"
 Terminal term;
 
 void (*term_write)(const char *string, size_t length);
@@ -168,8 +176,9 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	rsdp_addr_tag = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
 	void *term_write_ptr = (void*) term_str_tag->term_write;
 	term_write = term_write_ptr;
-	//term_write("Hello world", 11);
 
+	struct stivale2_struct_tag_smp *smp_info;
+	smp_info = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_SMP_ID);
 
 	// Temporary.
 	InitGraphicsCtx(fb);
@@ -180,6 +189,13 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	AcpiTables apics;
 	InitAcpi(*rsdp_addr_tag, &apics);
 	InitPageTable(memmap, kern_base_addr, pmrs);
+	
+	startup_aps(smp_info);
+
+    for (;;) {
+        asm ("hlt");
+    }
+
 	
 	font_obj.rgb = (RGB) {255, 0, 0};
 	ClearScreen((RGB) {0, 0, 0});

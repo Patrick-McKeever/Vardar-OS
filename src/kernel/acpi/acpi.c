@@ -4,6 +4,7 @@
 
 static RsdpDescriptor RSDP_TABLE;
 static GenericSdt SDT_HEAD;
+static IoApicList IO_APICS;
 static bool ValidateRsdpChecksum(RsdpDescriptor *rsdp_tab);
 static bool ValidateSdtChecksum(AcpiTable generic_sdt, int len);
 
@@ -13,8 +14,13 @@ int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag,
 	if(! InitRsdp(rsdp_addr_tag))
 		return -1;
 	InitSdt();
-	acpi_tabs->apic_list = ParseMadt();
+	IO_APICS = ParseMadt();
 	return 0;
+}
+
+IoApicList GetIoApics()
+{
+	return IO_APICS;
 }
 
 // FindTable fails when trying to find "APIC" signature (i.e. MADT).

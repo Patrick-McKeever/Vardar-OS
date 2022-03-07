@@ -1,4 +1,5 @@
 #include "madt.h"
+#include "acpi.h"
 #include "memory_management/physical_memory_manager.h"
 
 static Madt *MADT;
