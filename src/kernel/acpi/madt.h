@@ -16,6 +16,7 @@
 #define LOCAL_NON_MASKABLE_INTERRUPTS	0x04
 #define LOCAL_APIC_ADDRESS_OVERRIDE		0x05
 #define PROCESSOR_LOCAL_X2_APIC			0x09
+#define DEFAULT_LAPIC_ADDR				0xFEE00000
 
 typedef struct {
 	SdtHeader header;
@@ -47,7 +48,7 @@ typedef struct {
 	MadtRecordHeader header;
 	uint8_t bus_source;
 	uint8_t irq_source;
-	uint32_t global_system_interrupt;
+	uint32_t gsi;
 	uint16_t flags;
 } __attribute__((packed)) IntSourceOverrideRecord;
 
@@ -84,12 +85,21 @@ typedef struct {
 } __attribute__((packed)) LocalX2ApicRecord;
 
 typedef struct {
-	int num_apics;
-	uint64_t lapic_addr;
+	size_t num_io_apics;
 	IoApicRecord *io_apics;
-} IoApicList;
+	size_t num_lapics;
+	ProcessorLocalApic *lapics;
+	size_t num_isos;
+	IntSourceOverrideRecord *isos;	
+	uintptr_t lapic_addr;
+} smp_info_t;
 
-
-IoApicList ParseMadt();
+void ParseMadt();
+IoApicRecord *get_io_apic(uint8_t idx);
+int find_apic_from_gsi(uint32_t gsib);
+ProcessorLocalApic *get_lapic(uint8_t idx);
+InterruptSourceOverrideRecord *gsi_get_iso(uint32_t gsi);
+InterruptSourceOverrideRecord *get_iso_from_irq(uint32_t irq);
+uint32_t gsi_from_irq(uint8_t irq);
 
 #endif
