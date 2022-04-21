@@ -21,7 +21,7 @@ void InitializeIdt()
 	// We'll map IRQs [0x0,0xF] to [0x20,0x2F], which requires the master PIC
 	// (responsible for [0x0,0x7]) to have a vector offset of 0x20 and the
 	// slave (responsible for [0x8,0xF]) to have an offset of 0x28.
-	RemapPic(0x20, 0x28);
+	//RemapPic(0x20, 0x28);
 
 	// Ignore all but keyboard interrupts (IRQ 0x1) for now.
 	// outportb(MASTER_PIC_DATA, 0xfd);

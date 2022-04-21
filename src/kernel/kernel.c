@@ -209,11 +209,6 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	ioapic_route_irq_to_bsp(1, 0x21, 0);
 	//ioapic_set_gsi_mask(0x1, 0);
 	
-    //for (;;) {
-    //    asm ("hlt");
-    //}
-
-	
 	//font_obj.rgb = (RGB) {255, 0, 0};
 	//ClearScreen((RGB) {0, 0, 0});
 	//term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},

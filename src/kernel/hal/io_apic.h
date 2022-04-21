@@ -32,7 +32,7 @@ typedef struct {
 	unsigned mask                   : 1;
 	uint64_t reserved               : 39;
 	uint8_t  destination;               
-} ioredtbl_t;
+} __attribute__((packed)) ioredtbl_t;
 
 /** Interrupt pin polarity. Rarely ever used. **/
 typedef enum {

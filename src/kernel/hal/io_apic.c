@@ -59,7 +59,8 @@ ioapic_route_irq_to_bsp(uint8_t irq, uint8_t vector, bool masked)
 bool
 ioapic_route_irq(uint8_t irq, uint8_t rec_lapic_id, uint8_t vector, bool masked)
 {
-	PrintK("Routing irq 0x%h to LAPIC 0x%h\n", irq, rec_lapic_id);
+	PrintK("Routing irq 0x%h to LAPIC 0x%h w/ vector 0x%h\n", 
+			irq, rec_lapic_id, vector);
 	uint32_t gsi			=	gsi_from_irq(irq);
 	ioapic_t *ioapic		=	ioapic_from_gsi(gsi);
 	if(!ioapic)
@@ -68,8 +69,6 @@ ioapic_route_irq(uint8_t irq, uint8_t rec_lapic_id, uint8_t vector, bool masked)
 	ioredtbl_t entry 		=	ioapic_read_entry(ioapic, gsi);
 	uint32_t lower = *((uint32_t*) &entry);
 	uint32_t upper = *(((uint32_t*) &entry)+1);
-	PrintK("Lower dword: 0x%h\n", lower);
-	PrintK("Upper dword: 0x%h\n", upper);
 	entry.vector			=	vector;
 	entry.polarity			=	ACTIVE_HIGH;
 	entry.delivery_mode		= 	ICR_FIXED;
@@ -248,8 +247,9 @@ static void
 ioapic_write_entry(ioapic_t *ioapic, uint32_t gsi, ioredtbl_t entry)
 {
 	uint32_t pin 			= 	gsi - ioapic->min_gsi;
-	ioapic_write(ioapic, 0x10 + pin * 2, *((uint32_t*) &entry) + 1);
-	ioapic_write(ioapic, 0x11 + pin * 2, *((uint32_t*) &entry));
+	uint32_t *entry_words	= 	((uint32_t *) &entry);
+	ioapic_write(ioapic, 0x10 + pin * 2, entry_words[0]);
+	ioapic_write(ioapic, 0x11 + pin * 2, entry_words[1]);
 }
 
 static ioredtbl_t
@@ -340,6 +340,7 @@ initialize_ioapic_ints(ioapic_t *ioapic)
 		// GSIs 1-15: ISA IRQs. GSIs are identity mapped to IRQs unless an
 		// interrupt source override exists.
 		else if(gsi < MAX_ISA_IRQ) {
+			PrintK("Writing GSI 0x%h to vector 0x%h\n", gsi, gsi + 0x20);
 			entry.vector			= 	gsi + 0x20;
 			entry.delivery_mode 	= 	ICR_FIXED;
 			entry.polarity			= 	ACTIVE_HIGH;
@@ -350,6 +351,7 @@ initialize_ioapic_ints(ioapic_t *ioapic)
 		// Some GSIs outside of [0,16) may be map to IRQs, if specified as such
 		// in a MADT interrupt source override (ISO).
 		else if((iso_info = gsi_get_iso(gsi))) {
+			PrintK("Iso for GSI %d\n", gsi);
 			entry.vector			=	iso_info->irq_source + 0x20;
 			entry.delivery_mode 	=	ICR_FIXED;
 			entry.polarity			=	get_pin_polarity(iso_info->flags);

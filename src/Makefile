@@ -58,6 +58,12 @@ run:
 	../limine/limine-install bin/image.iso
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso $(QEMUFLAGS)
 	
+run-monitor:
+	cp -v kernel.elf limine.cfg iso_root/
+	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
+	../limine/limine-install bin/image.iso
+	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -monitor stdio $(QEMUFLAGS)
+
 run-no-shutdown:
 	cp -v kernel.elf limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
