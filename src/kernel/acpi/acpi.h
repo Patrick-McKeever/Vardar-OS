@@ -70,14 +70,8 @@ typedef struct {
 	bool uses_xsdt;
 } __attribute__((packed)) GenericSdt;
 
-typedef struct {
-	IoApicList apic_list;
-} __attribute__((packed)) AcpiTables;
+int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag);
 
-int InitAcpi(struct stivale2_struct_tag_rsdp rsdp_addr_tag,
-			 AcpiTables *acpi_tabs);
-
-IoApicList GetIoApics();
 AcpiTable FindTable(char *table_id);
 
 /**

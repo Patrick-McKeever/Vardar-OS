@@ -5,6 +5,7 @@
 static IdtEntry IDT[256];
 static volatile KeyInfo KEY_INFO;
 
+
 void InitializeIdt() 
 {
 	//SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
@@ -21,9 +22,12 @@ void InitializeIdt()
 	RemapPic(0x20, 0x28);
 
 	// Ignore all but keyboard interrupts (IRQ 0x1) for now.
-	outportb(MASTER_PIC_DATA, 0xfd);
-	outportb(SLAVE_PIC_DATA,  0xff);
+	// outportb(MASTER_PIC_DATA, 0xfd);
+	// outportb(SLAVE_PIC_DATA,  0xff);
 	
+	// Mask all interrupts from 8259 PIC.
+	outportb(SLAVE_PIC_DATA, 0xFF);
+	outportb(MASTER_PIC_DATA, 0xFF);
 
 	IdtDescriptor idt_desc = {
 		.bounds = 256 * sizeof(IdtEntry) - 1,

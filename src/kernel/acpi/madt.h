@@ -1,6 +1,7 @@
 #ifndef MADT_H
 #define MADT_H
 
+#include <stddef.h>
 #include "sdt.h"
 #include "memory_management/physical_memory_manager.h"
 
@@ -13,7 +14,7 @@
 #define IO_APIC							0x01
 #define INTERRUPT_SOURCE_OVERRIDE		0x02
 #define NON_MASKABLE_INTERRUPT_SOURCE	0x03
-#define LOCAL_NON_MASKABLE_INTERRUPTS	0x04
+#define LOCAL_NON_MASKABLE_INTERRUPT	0x04
 #define LOCAL_APIC_ADDRESS_OVERRIDE		0x05
 #define PROCESSOR_LOCAL_X2_APIC			0x09
 #define DEFAULT_LAPIC_ADDR				0xFEE00000
@@ -38,6 +39,7 @@ typedef struct {
 
 typedef struct {
 	MadtRecordHeader header;
+	uint8_t io_apic_id;
 	uint8_t reserved;
 	uint32_t io_apic_addr;
 	// Global system interrupt base (GSIB).
@@ -57,7 +59,7 @@ typedef struct {
 	uint8_t nmi_source;
 	uint8_t reserved;
 	uint16_t flags;
-	uint32_t global_system_interrupt;
+	uint32_t gsi;
 } __attribute__((packed)) NmiSourceRecord;
 
 typedef struct {
@@ -90,16 +92,23 @@ typedef struct {
 	size_t num_lapics;
 	ProcessorLocalApic *lapics;
 	size_t num_isos;
-	IntSourceOverrideRecord *isos;	
+	IntSourceOverrideRecord *isos;
+	size_t num_nmi_sources;
+	NmiSourceRecord *nmi_sources;
+	size_t num_nmis;
+	NmiRecord *nmis;
 	uintptr_t lapic_addr;
 } smp_info_t;
 
 void ParseMadt();
+smp_info_t get_smp_info();
 IoApicRecord *get_io_apic(uint8_t idx);
 int find_apic_from_gsi(uint32_t gsib);
 ProcessorLocalApic *get_lapic(uint8_t idx);
-InterruptSourceOverrideRecord *gsi_get_iso(uint32_t gsi);
-InterruptSourceOverrideRecord *get_iso_from_irq(uint32_t irq);
+IntSourceOverrideRecord *gsi_get_iso(uint32_t gsi);
+IntSourceOverrideRecord *get_iso_from_irq(uint8_t irq);
+NmiSourceRecord *gsi_get_nmi_source(uint32_t gsi);
+NmiRecord *get_nmi_record(uint8_t idx);
 uint32_t gsi_from_irq(uint8_t irq);
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef IO_APIC_H
 #define IO_APIC_H
 
-#include "kernel/acpi/madt.h"
+#include "acpi/madt.h"
 
 // APIC IDs are 4 bits, so 2^4 possible APICs. I believe this can go higher
 // with X2APIC, so revise if you ever support that.
@@ -14,31 +14,24 @@
 #define MAX_ISA_IRQ					16
 
 typedef enum {
-	IOAPIC_ID		=	0;
-	IOAPIC_VER		=	1;
-	IOAPIC_ARB		=	2;
-	IOREDTBL		=	3;
+	IOAPIC_ID		=	0,
+	IOAPIC_VER		=	1,
+	IOAPIC_ARB		=	2,
+	IOREDTBL		=	3,
 } ioapic_register_t;
 
 /** Redirection table entry (inside I/O APIC). **/                              
-typedef union {                                                                 
-    struct {                                                                    
-        uint8_t  vector;                                                        
-        unsigned delivery_mode          : 3;                                    
-        unsigned destination_mode       : 1;                                    
-        unsigned delivery_status        : 1;                                    
-        unsigned polarity               : 1;                                    
-        unsigned remote_irr_pending     : 1;                                    
-        unsigned trigger_mode           : 1;                                    
-        unsigned mask                   : 1;                                    
-        unsigned reserved               : 39;                                   
-        uint8_t  destination;                                                   
-    };                                                                          
-                                                                                
-    struct {                                                                    
-        uint32_t lower_dword;                                                   
-        uint32_t upper_dword;                                                   
-    };                                                                          
+typedef struct {
+	uint8_t  vector;                                                        
+	unsigned delivery_mode          : 3;
+	unsigned destination_mode       : 1;
+	unsigned delivery_status        : 1;
+	unsigned polarity               : 1;
+	unsigned remote_irr_pending     : 1;
+	unsigned trigger_mode           : 1;
+	unsigned mask                   : 1;
+	uint64_t reserved               : 39;
+	uint8_t  destination;               
 } ioredtbl_t;
 
 /** Interrupt pin polarity. Rarely ever used. **/
@@ -86,25 +79,23 @@ typedef struct {
 } int_attr_t; 
 
 typedef struct {
+	bool present;
 	volatile uint32_t *ioregsel;
 	volatile uint32_t *iowin;
 	uint32_t min_gsi;
 	uint8_t num_pins;
 	uint8_t has_eoi;
 	uint8_t apic_id;
-} ioapic_t;
-
-ioapic_t IOAPICS[MAX_IOAPICS];
+} __attribute__((packed)) ioapic_t;
 
 void
 register_ioapic(IoApicRecord ioapic_record);
 
+bool
+ioapic_route_irq_to_bsp(uint8_t irq, uint8_t vector, bool masked);
 
-static void
-initialize_ioapic_ints(ioapic_t *ioapic);
-
-ioapic_t*
-ioapic_from_gsi(uint32_t gsi);
+bool
+ioapic_route_irq(uint8_t irq, uint8_t rec_lapic_id, uint8_t vector, bool masked);
 
 uint8_t
 vector_from_gsi(uint32_t gsi);
@@ -120,24 +111,6 @@ set_gsi_trigger_mode(uint32_t gsi, trigger_mode_t trigger_mode);
 
 bool 
 set_gsi_polarity(uint32_t gsi, pin_polarity_t polarity);
-
-static uint32_t
-ioapic_read(ioapic_t *ioapic, uint8_t offset);
-
-static void
-ioapic_write(ioapic_t *ioapic, uint8_t offset, uint32_t val);
-
-static void
-ioapic_write_entry(ioapic_t *ioapic, uint32_t gsi, ioredtbl_t entry);
-
-static ioredtbl_t
-ioapic_read_entry(ioapic_t *ioapic, uint32_t gsi);
-
-static inline pin_polarity_t
-get_pin_polarity(uint16_t flags);
-
-static inline trigger_mode_t
-get_trigger_mode(uint16_t flags);
 
 ioapic_t*
 ioapic_from_gsi(uint32_t gsi);

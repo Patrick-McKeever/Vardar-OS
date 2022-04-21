@@ -225,15 +225,15 @@ ioapic_write(uint8_t idx, uint32_t reg_offset, uint32_t val)
 static inline uint32_t 
 lapic_read(uint32_t reg_offset) 
 {
-	IoApicList ioapics = GetIoApics();
+	smp_info_t smp_info = get_smp_info();
 	return *((volatile uint32_t*) (ioapics.lapic_addr + reg_offset));
 }
 
 static inline void 
 lapic_write(uint32_t reg_offset, uint32_t val)
 {
-	IoApicList ioapics = GetIoApics();
-	*((volatile uint32_t*) (ioapics.lapic_addr + reg_offset)) = val;
+	smp_info_t smp_info = get_smp_info();
+	*((volatile uint32_t*) (smp_info.lapic_addr + reg_offset)) = val;
 }
 
 void 
@@ -400,7 +400,7 @@ enable_legacy_irq(int cpu, uint8_t irq_num)
 
 bool eoi_is_broadcast()
 {
-	return !(lapic_read(LVT_SPURIOUS_INT_R_OFFSET) & (1 << 12));
+	return !(lapic_read(LVT_SPURIOUS_INT_REG) & (1 << 12));
 }
 
 void set_eoi_broadcast(bool enabled)
@@ -409,6 +409,6 @@ void set_eoi_broadcast(bool enabled)
 		return;
 	
 	uint32_t new_reg_val	= spurious_reg | ((!enabled) << 12);
-	lapic_write(LVT_SPURIOUS_INT_R_OFFSET, new_reg_val)
+	lapic_write(LVT_SPURIOUS_INT_REG, new_reg_val)
 }
 #endif

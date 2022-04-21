@@ -1,4 +1,19 @@
 #include "utils/printf.h"
+#include <stdbool.h>
+
+static inline void PutChar(char c)
+{
+	term_write(&c, 1);
+}
+
+static inline void Puts(char *c)
+{
+	int len;
+	for(len = 0; c[len] != '\0'; ++len) {}
+	term_write(c, len);
+}
+
+bool IN_USE;
 
 // Needless to say, this is not a faithful implementation of the C stdlib's
 // printf. I treat all ints as quadwords and leave out a bunch of formats,
@@ -7,6 +22,10 @@
 // than sufficient.
 void PrintK(char *str,...)
 {
+	while(IN_USE); 	
+	
+	IN_USE = true;
+
 	char *traverse;
 	char *s;
 	uint64_t i;	
@@ -15,8 +34,10 @@ void PrintK(char *str,...)
 
 	for(traverse = str; *traverse != '\0'; ++traverse) {
 		do {
-			if(*traverse == '\0')
+			if(*traverse == '\0') {
+				IN_USE = false;
 				return;
+			}
 			PutChar(*traverse);
 		} while(*(++traverse) != '%'); 
 
@@ -51,6 +72,8 @@ void PrintK(char *str,...)
 		}
 	}
 	va_end(arg);	
+	
+	IN_USE = false;
 }
 
 char *Convert(uint64_t num, int base)

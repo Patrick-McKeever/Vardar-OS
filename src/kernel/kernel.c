@@ -154,6 +154,7 @@ static Font *global_font;
 #include "utils/printf.h"
 #include "acpi/acpi.h"
 #include "hal/cpu_init.h"
+#include "hal/io_apic.h"
 Terminal term;
 
 void (*term_write)(const char *string, size_t length);
@@ -186,12 +187,15 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 	InitPmm(memmap);
-	AcpiTables apics;
-	InitAcpi(*rsdp_addr_tag, &apics);
+	InitAcpi(*rsdp_addr_tag);
+	ParseMadt();
 	InitPageTable(memmap, kern_base_addr, pmrs);
-	
+	InitializeIdt();
 	startup_aps(smp_info);
-
+	
+	// Error is here. This causes page fault... somehow.
+	ioapic_route_irq_to_bsp(2, 0x22, 0);
+	
     for (;;) {
         asm ("hlt");
     }
@@ -203,7 +207,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
 	WriteBack();
-	InitializeIdt();
+	
 	SetKeystrokeConsumer(&HandleKeyStroke);
 
     for (;;) {
