@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "keycodes.h"
+#include "utils/printf.h"
 #include "hal/io_apic.h"
 #include <stdbool.h>
 
@@ -139,9 +140,3 @@ void Isr1Handler()
 	end_of_interrupt(false, 0x21);
 }
 
-void disable_pic()
-{
-	__asm__("mov %%al, $0xff"
-			"out $0xa1, %%al"
-			"out $0x21, %%al");
-}

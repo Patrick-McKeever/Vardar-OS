@@ -200,8 +200,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	InitializeIdt();
 
-	__asm__("cli"):
-	disable_pic();
+	__asm__("cli");
 	startup_aps(smp_info);
 	
 	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);

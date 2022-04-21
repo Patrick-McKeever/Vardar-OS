@@ -66,16 +66,19 @@ ioapic_route_irq(uint8_t irq, uint8_t rec_lapic_id, uint8_t vector, bool masked)
 		return false;
 
 	ioredtbl_t entry 		=	ioapic_read_entry(ioapic, gsi);
+	uint32_t lower = *((uint32_t*) &entry);
+	uint32_t upper = *(((uint32_t*) &entry)+1);
+	PrintK("Lower dword: 0x%h\n", lower);
+	PrintK("Upper dword: 0x%h\n", upper);
 	entry.vector			=	vector;
-	entry.destination_mode	=	0;
 	entry.polarity			=	ACTIVE_HIGH;
 	entry.delivery_mode		= 	ICR_FIXED;
 	entry.trigger_mode		=	EDGE_SENSITIVE;
 	entry.destination		=	rec_lapic_id;
 	entry.mask				=	masked;
 
-	uint32_t lower = *((uint32_t*) &entry);
-	uint32_t upper = *(((uint32_t*) &entry)+1);
+	lower = *((uint32_t*) &entry);
+	upper = *(((uint32_t*) &entry)+1);
 	PrintK("Lower dword: 0x%h\n", lower);
 	PrintK("Upper dword: 0x%h\n", upper);
 
