@@ -159,6 +159,14 @@ Terminal term;
 
 void (*term_write)(const char *string, size_t length);
 
+void print_key(KeyInfo *key_info)
+{
+	char c[2];
+	c[0] = CharFromScancode(key_info);
+	c[1] = 0;
+	PrintK(c);
+}
+
 void _start(struct stivale2_struct *stivale2_struct) {
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
@@ -191,24 +199,32 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	ParseMadt();
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	InitializeIdt();
+
+	__asm__("cli"):
+	disable_pic();
 	startup_aps(smp_info);
 	
-	// Error is here. This causes page fault... somehow.
-	ioapic_route_irq_to_bsp(2, 0x22, 0);
+	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
+
+	// This works, but keyboard input breaks.
+	ioapic_route_irq_to_bsp(1, 0x21, 0);
+	//ioapic_set_gsi_mask(0x1, 0);
 	
-    for (;;) {
-        asm ("hlt");
-    }
+    //for (;;) {
+    //    asm ("hlt");
+    //}
 
 	
-	font_obj.rgb = (RGB) {255, 0, 0};
-	ClearScreen((RGB) {0, 0, 0});
-	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
-					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
+	//font_obj.rgb = (RGB) {255, 0, 0};
+	//ClearScreen((RGB) {0, 0, 0});
+	//term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
+	//				 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
+	//
+	//WriteBack();
 	
-	WriteBack();
-	
-	SetKeystrokeConsumer(&HandleKeyStroke);
+	//SetKeystrokeConsumer(&HandleKeyStroke);
+	SetKeystrokeConsumer(&print_key);
+	__asm__("sti");
 
     for (;;) {
         asm ("hlt");

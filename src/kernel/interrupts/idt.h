@@ -86,4 +86,6 @@ void RemapPic(int master_offset, int slave_offset);
  */
 void Isr1Handler();
 
+void disable_pic();
+
 #endif

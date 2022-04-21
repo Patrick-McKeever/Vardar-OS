@@ -1,5 +1,6 @@
 #include "io_apic.h"
 #include "lapic.h"
+#include "utils/printf.h"
 #include "cpu_init.h"
 
 static ioapic_t IOAPICS[MAX_IOAPICS];
@@ -58,15 +59,25 @@ ioapic_route_irq_to_bsp(uint8_t irq, uint8_t vector, bool masked)
 bool
 ioapic_route_irq(uint8_t irq, uint8_t rec_lapic_id, uint8_t vector, bool masked)
 {
+	PrintK("Routing irq 0x%h to LAPIC 0x%h\n", irq, rec_lapic_id);
 	uint32_t gsi			=	gsi_from_irq(irq);
 	ioapic_t *ioapic		=	ioapic_from_gsi(gsi);
 	if(!ioapic)
 		return false;
 
-	ioredtbl_t entry		=	ioapic_read_entry(ioapic, gsi);
+	ioredtbl_t entry 		=	ioapic_read_entry(ioapic, gsi);
 	entry.vector			=	vector;
+	entry.destination_mode	=	0;
+	entry.polarity			=	ACTIVE_HIGH;
+	entry.delivery_mode		= 	ICR_FIXED;
+	entry.trigger_mode		=	EDGE_SENSITIVE;
 	entry.destination		=	rec_lapic_id;
 	entry.mask				=	masked;
+
+	uint32_t lower = *((uint32_t*) &entry);
+	uint32_t upper = *(((uint32_t*) &entry)+1);
+	PrintK("Lower dword: 0x%h\n", lower);
+	PrintK("Upper dword: 0x%h\n", upper);
 
 	ioapic_write_entry(ioapic, gsi, entry);
 	return true;
@@ -80,7 +91,7 @@ ioapic_set_smi_gsi(uint32_t gsi)
 	// accomodate some edge case.
 	// SMI is the interrupt which takes processor into ring 2 (system management
 	// mode).
-	ioapic_t *ioapic 	= 	ioapic_from_gsi(gsi);
+	ioapic_t *ioapic 		= 	ioapic_from_gsi(gsi);
 	if(!ioapic)
 		return false;
 	
@@ -92,6 +103,7 @@ ioapic_set_smi_gsi(uint32_t gsi)
 	entry.polarity 			= 	ACTIVE_HIGH;
 	entry.trigger_mode 		= 	EDGE_SENSITIVE;
 	entry.mask				= 	0;
+
 
 	ioapic_write_entry(ioapic, gsi, entry);
 	return true;
@@ -233,8 +245,8 @@ static void
 ioapic_write_entry(ioapic_t *ioapic, uint32_t gsi, ioredtbl_t entry)
 {
 	uint32_t pin 			= 	gsi - ioapic->min_gsi;
-	ioapic_write(ioapic, 0x11 + pin * 2, *((uint32_t*) &entry));
 	ioapic_write(ioapic, 0x10 + pin * 2, *((uint32_t*) &entry) + 1);
+	ioapic_write(ioapic, 0x11 + pin * 2, *((uint32_t*) &entry));
 }
 
 static ioredtbl_t

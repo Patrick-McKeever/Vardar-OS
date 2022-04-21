@@ -115,4 +115,7 @@ set_gsi_polarity(uint32_t gsi, pin_polarity_t polarity);
 ioapic_t*
 ioapic_from_gsi(uint32_t gsi);
 
+void
+end_of_interrupt(bool broadcast, uint8_t vector);
+
 #endif

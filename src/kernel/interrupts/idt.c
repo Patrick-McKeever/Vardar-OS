@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "keycodes.h"
+#include "hal/io_apic.h"
 #include <stdbool.h>
 
 static IdtEntry IDT[256];
@@ -87,6 +88,7 @@ void RemapPic(int master_offset, int slave_offset)
 
 void Isr1Handler()
 {
+	PrintK("In ISR1 handler\n");
 	// Read byte from keyboard.
 	KEY_INFO.scancode = inportb(0x60);
 	switch(KEY_INFO.scancode) {
@@ -133,6 +135,13 @@ void Isr1Handler()
 	}
 
 	// Tell PIC to resume interrupts now that we've handled this one.
-	outportb(MASTER_PIC_COMMAND, 0x20);
+	//outportb(MASTER_PIC_COMMAND, 0x20);
+	end_of_interrupt(false, 0x21);
 }
 
+void disable_pic()
+{
+	__asm__("mov %%al, $0xff"
+			"out $0xa1, %%al"
+			"out $0x21, %%al");
+}
