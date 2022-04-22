@@ -297,29 +297,9 @@ ioapic_from_gsi(uint32_t gsi)
 void
 end_of_interrupt(bool broadcast, uint8_t vector)
 {
-    // We can disable EOI broadcasting by setting the 12th bit of the lapic's
-    // spurious interrupt register.
-    //if(broadcast != eoi_is_broadcast()) {
-    //    uint32_t spurious_reg   = lapic_read(LAPIC_SPURIOUS_INT_REG);
-    //    uint32_t new_val        = spurious_reg | ((!broadcast) << 12);
-    //    lapic_write(LAPIC_SPURIOUS_INT_REG, new_val);
-    //}
-
     // To signal end of interrupt, write to lapic's EOI register. Literally any 
     // write will trigger EOI.
     lapic_write(LAPIC_EOI_REG, 0);
-                                                                                
-    //int_attr_t int_attrs = VECTOR_ATTRS[vector];
-    //if(broadcast && int_attrs.attrs.trigger_mode == EDGE_SENSITIVE) {
-    //    return;
-	//}
-
-	//ioapic_t *ioapic = &IOAPICS[int_attrs.ioapic_ind];
-    //ioapic_write(ioapic, 0x40, vector);
-    // TODO: Lower versions of APIC standard don't support per-IOAPIC EOIs.
-    // There's a semi-hackish workaround which involves temporarily switching
-    // the gsi to edge-triggered, since edge-triggered gsis can't disable
-    // broadcasts. Implement this at some point.
 }
 
 static void
@@ -377,7 +357,7 @@ initialize_ioapic_ints(ioapic_t *ioapic)
 			entry.mask				=	1;
 		}
 		
-		entry.destination_mode	=	0;
+		entry.destination_mode					=	0;
 		VECTOR_ATTRS[entry.vector].attrs 		= 	entry;
 		VECTOR_ATTRS[entry.vector].gsi 			= 	gsi;
 		VECTOR_ATTRS[entry.vector].irq 			= 	entry.vector - 0x20;

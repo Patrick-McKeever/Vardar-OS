@@ -2,12 +2,12 @@
 #include "acpi/madt.h"
 #include "utils/printf.h"
 
-static volatile uint32_t *LAPIC_BASE;
+static uintptr_t LAPIC_BASE;
 
 void
 lapic_write(lapic_reg_t lapic_reg, uint32_t val)
 {
-	*(LAPIC_BASE + lapic_reg) = val;
+	*((volatile uint32_t*) (LAPIC_BASE + lapic_reg)) = val;
 }
 
 uint32_t
@@ -22,7 +22,7 @@ enable_lapic()
 	// Sth to note is that this uses the hardcoded LAPIC MMIO mapping.
 	// A more generic implementation would accomodate remappings.
 	smp_info_t smp_info = get_smp_info();
-	LAPIC_BASE = (volatile uint32_t*) smp_info.lapic_addr;
+	LAPIC_BASE = smp_info.lapic_addr;
 	
 	// No NMIs.
 	NmiRecord *nmi;
@@ -117,3 +117,11 @@ send_ipi(ipi_t *ipi)
 	lapic_write(LAPIC_ICR1_REG, upper_dword);
 	lapic_write(LAPIC_ICR0_REG, lower_dword);
 }
+
+//void
+//apic_start_timer()
+//{
+//	lapic_write(LAPIC_DIVIDE_CONFIG_REG, 0x3);
+//	lapic_write(LAPIC_INIT_COUNT_REG, 0xFFFFFFFF);
+//	lapic_write()
+//}
