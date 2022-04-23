@@ -118,4 +118,10 @@ ioapic_from_gsi(uint32_t gsi);
 void
 end_of_interrupt(bool broadcast, uint8_t vector);
 
+void
+mask_irq(uint8_t irq);
+
+void
+unmask_irq(uint8_t irq);
+
 #endif

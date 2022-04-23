@@ -31,6 +31,14 @@ isr1:
 	POPALL
 	iretq
 
+GLOBAL isr2
+[extern Isr2Handler]
+isr2:
+	PUSHALL
+	call Isr2Handler
+	POPALL
+	iretq
+
 GLOBAL LoadIdt 
 ; Loads the IDT from the first parameter passed to it.
 ; @input rdi The address of the IDT.

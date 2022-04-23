@@ -2,6 +2,7 @@
 #include "keycodes.h"
 #include "utils/printf.h"
 #include "hal/io_apic.h"
+#include "hal/pit.h"
 #include <stdbool.h>
 
 static IdtEntry IDT[256];
@@ -10,9 +11,10 @@ static volatile KeyInfo KEY_INFO;
 
 void InitializeIdt() 
 {
-	//SetIdtEntry(1, (void*) isr1, INTERRUPT_GATE);
 	// Keyboard input is IRQ 1 + 0x20 offset = 0x21.
 	SetIdtEntry(0x21, (void*) isr1, INTERRUPT_GATE);
+	// Timer input (IRQ 2).
+	SetIdtEntry(0x22, (void*) isr2, INTERRUPT_GATE);
 		
 	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
 	// hardware interrupts. This conflicts with IRQs, which occupy part of the
@@ -89,7 +91,6 @@ void RemapPic(int master_offset, int slave_offset)
 
 void Isr1Handler()
 {
-	PrintK("In ISR1 handler\n");
 	// Read byte from keyboard.
 	KEY_INFO.scancode = inportb(0x60);
 	switch(KEY_INFO.scancode) {
@@ -140,3 +141,10 @@ void Isr1Handler()
 	end_of_interrupt(false, 0x21);
 }
 
+void Isr2Handler()
+{
+	void (*timer_handler)(void) = get_timer_handler();
+	if(timer_handler)
+		timer_handler();
+	end_of_interrupt(false, 0x22);
+}

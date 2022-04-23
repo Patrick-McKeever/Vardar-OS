@@ -53,6 +53,9 @@ typedef struct {
 
 // The ISR1 handler defined in the asm file.
 extern void 	isr1();
+// ISR2 (timer) handler from asm file.
+extern void		isr2();
+
 // Loads the IDT referenced by given IDT descriptor as the IDT. 
 extern void 	LoadIdt(uint64_t idtr);
 extern uint8_t	volatile SCANCODE;
@@ -86,6 +89,6 @@ void RemapPic(int master_offset, int slave_offset);
  */
 void Isr1Handler();
 
-void disable_pic();
+void Isr2Handler();
 
 #endif

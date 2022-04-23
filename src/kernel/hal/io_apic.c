@@ -367,3 +367,18 @@ initialize_ioapic_ints(ioapic_t *ioapic)
 		ioapic_write_entry(ioapic, gsi, entry);
 	}
 }
+
+void
+mask_irq(uint8_t irq)
+{
+	uint32_t gsi = gsi_from_irq(irq);
+	ioapic_set_gsi_mask(gsi, 1);
+}
+
+void
+unmask_irq(uint8_t irq)
+{
+	uint32_t gsi = gsi_from_irq(irq);
+	ioapic_set_gsi_mask(gsi, 0);
+}
+

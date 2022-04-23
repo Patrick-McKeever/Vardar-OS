@@ -168,6 +168,7 @@ void print_key(KeyInfo *key_info)
 }
 
 void _start(struct stivale2_struct *stivale2_struct) {
+	__asm__("cli");
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 	struct stivale2_struct_tag_memmap *memmap;
@@ -200,24 +201,26 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	InitializeIdt();
 
-	__asm__("cli");
 	startup_aps(smp_info);
 	
 	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
 
 	// This works, but keyboard input breaks.
-	ioapic_route_irq_to_bsp(1, 0x21, 0);
+	//ioapic_route_irq_to_bsp(1, 0x21, 0);
 	//ioapic_set_gsi_mask(0x1, 0);
+	unmask_irq(0x1);
+	register_pit_handler();
+	unmask_irq(0x2);
 	
-	//font_obj.rgb = (RGB) {255, 0, 0};
-	//ClearScreen((RGB) {0, 0, 0});
-	//term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
-	//				 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
-	//
-	//WriteBack();
+	font_obj.rgb = (RGB) {255, 0, 0};
+	ClearScreen((RGB) {0, 0, 0});
+	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
+					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
 	
-	//SetKeystrokeConsumer(&HandleKeyStroke);
-	SetKeystrokeConsumer(&print_key);
+	WriteBack();
+	
+	SetKeystrokeConsumer(&HandleKeyStroke);
+	//SetKeystrokeConsumer(&print_key);
 	__asm__("sti");
 
     for (;;) {
