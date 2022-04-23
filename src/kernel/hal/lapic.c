@@ -1,8 +1,13 @@
 #include "hal/lapic.h"
+#include "hal/pit.h"
 #include "acpi/madt.h"
 #include "utils/printf.h"
+#include "utils/spin_lock.h"
 
+// Base address of LAPIC MMIO patch.
 static uintptr_t LAPIC_BASE;
+// Entry n stores the frequency in HZ of the timer of theLAPIC with ID n.
+static uint16_t LAPIC_TIMER_HZs[256];
 
 void
 lapic_write(lapic_reg_t lapic_reg, uint32_t val)
@@ -44,7 +49,7 @@ void
 disable_lapic()
 {
 	smp_info_t smp_info = get_smp_info();
-	LAPIC_BASE = (volatile uint32_t*) smp_info.lapic_addr;
+	LAPIC_BASE = smp_info.lapic_addr;
 
 	uint32_t current_val = lapic_read(LAPIC_SPURIOUS_INT_REG);
 	uint32_t enabled = current_val | (0 << 8);
@@ -112,10 +117,72 @@ set_eoi_broadcast(bool enabled)
 void
 send_ipi(ipi_t *ipi)
 {
-	uint32_t lower_dword = *((uint32_t *) &ipi);
-	uint32_t upper_dword = *(((uint32_t *) &ipi) + 1);
-	lapic_write(LAPIC_ICR1_REG, upper_dword);
-	lapic_write(LAPIC_ICR0_REG, lower_dword);
+	// You need to write upper dword first.
+	lapic_write(LAPIC_ICR1_REG, ipi->upper_dword);
+	lapic_write(LAPIC_ICR0_REG, ipi->lower_dword);
+}
+
+static uint32_t PIT_COUNT;
+static spin_lock_t PIT_COUNT_LOCK;
+
+static void
+pit_increment(void)
+{
+	++PIT_COUNT;
+}
+
+void
+lapic_timer_init(uint8_t vector)
+{
+	__asm__("cli");
+
+	// Set LAPIC timer on long countdown, but don't interrupt when
+	// done.
+	lvt_entry_t timer_entry;
+	timer_entry.dword			=	lapic_read(LAPIC_TIMER_REG);
+	timer_entry.vector			=	vector;
+	timer_entry.delivery_mode	=	LVT_FIXED;
+	timer_entry.mask			=	1;
+	timer_entry.timer_mode		=	ONE_SHOT;
+
+	// Set LAPIC timer on long countdown from 0xFFFFFFFF, decrementing 
+	// every 8 (2 ^ (0b010 + 1), as per divide config reg) ticks.
+	lapic_write(LAPIC_TIMER_REG, timer_entry.dword);
+	lapic_write(LAPIC_DIVIDE_CONFIG_REG, 0b010);
+	lapic_write(LAPIC_INIT_COUNT_REG, 0xFFFFFFFF);
+	
+	wait(&PIT_COUNT_LOCK);
+
+	PIT_COUNT					=	0;
+	register_pit_handler(&pit_increment);
+	
+	// Between starting the countdown of each timer, some time has already
+	// passed, so let's get the PIT and LAPIC current counts at (roughly)
+	// the same time.
+	uint32_t init_lapic_count	=	lapic_read(LAPIC_CURRENT_COUNT_REG);
+	uint32_t pit_rate_hz 		=	1000;
+	uint32_t total_pit_tics		=	100;
+
+	// PIT now has a rate of (roughly) 1000hz.
+	set_pit_periodic(pit_rate_hz);
+	__asm__("sti");
+
+	// Busy-wait until PIT counter reaches certain value.
+	// W/ rate of 1000hz and 100 tics, this will take 1μs.
+	while(PIT_COUNT < total_pit_tics)
+	{
+		PrintK("");
+	}
+
+	uint32_t final_lapic_count	=	lapic_read(LAPIC_CURRENT_COUNT_REG);
+	uint32_t total_lapic_tics	=	(init_lapic_count - final_lapic_count) * 8;
+
+	release(&PIT_COUNT_LOCK);
+	
+	uint8_t lapic_id			=	get_lapic_id();
+	LAPIC_TIMER_HZs[lapic_id] 	=	(total_lapic_tics / total_pit_tics) * pit_rate_hz;
+	PrintK("LAPIC timer for LAPIC #%d has frequency of %d hz.\n",
+			lapic_id, LAPIC_TIMER_HZs[lapic_id]);
 }
 
 //void

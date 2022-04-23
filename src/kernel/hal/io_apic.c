@@ -247,9 +247,11 @@ static void
 ioapic_write_entry(ioapic_t *ioapic, uint32_t gsi, ioredtbl_t entry)
 {
 	uint32_t pin 			= 	gsi - ioapic->min_gsi;
-	uint32_t *entry_words	= 	((uint32_t *) &entry);
-	ioapic_write(ioapic, 0x10 + pin * 2, entry_words[0]);
-	ioapic_write(ioapic, 0x11 + pin * 2, entry_words[1]);
+	ioapic_write(ioapic, 0x10 + pin * 2, entry.lower_dword);
+	ioapic_write(ioapic, 0x11 + pin * 2, entry.upper_dword);
+	//uint32_t *entry_words	= 	((uint32_t *) &entry);
+	//ioapic_write(ioapic, 0x10 + pin * 2, entry_words[0]);
+	//ioapic_write(ioapic, 0x11 + pin * 2, entry_words[1]);
 }
 
 static ioredtbl_t
@@ -357,7 +359,7 @@ initialize_ioapic_ints(ioapic_t *ioapic)
 			entry.mask				=	1;
 		}
 		
-		entry.destination_mode					=	0;
+		entry.destination_mode					=	IOAPIC_PHYSICAL;
 		VECTOR_ATTRS[entry.vector].attrs 		= 	entry;
 		VECTOR_ATTRS[entry.vector].gsi 			= 	gsi;
 		VECTOR_ATTRS[entry.vector].irq 			= 	entry.vector - 0x20;

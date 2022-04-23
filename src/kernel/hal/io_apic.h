@@ -20,18 +20,26 @@ typedef enum {
 	IOREDTBL		=	3,
 } ioapic_register_t;
 
-/** Redirection table entry (inside I/O APIC). **/                              
-typedef struct {
-	uint8_t  vector;                                                        
-	unsigned delivery_mode          : 3;
-	unsigned destination_mode       : 1;
-	unsigned delivery_status        : 1;
-	unsigned polarity               : 1;
-	unsigned remote_irr_pending     : 1;
-	unsigned trigger_mode           : 1;
-	unsigned mask                   : 1;
-	uint64_t reserved               : 39;
-	uint8_t  destination;               
+/** Redirection table entry (inside I/O APIC). 
+ * This needs the -features=extensions option to compile. **/
+typedef union {
+	struct {
+		uint8_t  vector;                                                        
+		unsigned delivery_mode          : 3;
+		unsigned destination_mode       : 1;
+		unsigned delivery_status        : 1;
+		unsigned polarity               : 1;
+		unsigned remote_irr_pending     : 1;
+		unsigned trigger_mode           : 1;
+		unsigned mask                   : 1;
+		uint64_t reserved               : 39;
+		uint8_t  destination;
+	};
+
+	struct {
+		uint32_t lower_dword;
+		uint32_t upper_dword;
+	};
 } __attribute__((packed)) ioredtbl_t;
 
 /** Interrupt pin polarity. Rarely ever used. **/
@@ -70,6 +78,11 @@ typedef enum {
 	ICR_INIT					= 	0b101,
 	ICR_STARTUP					= 	0b100
 } icr_delivery_t;
+
+typedef enum {
+	IOAPIC_PHYSICAL				=	0,
+	IOAPIC_LOGICAL				=	1
+} dest_mode_t;
 
 typedef struct {                                                                
     ioredtbl_t  attrs;                                                          

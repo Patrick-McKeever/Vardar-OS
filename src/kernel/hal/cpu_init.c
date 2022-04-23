@@ -21,6 +21,7 @@ void ap_entry()
 {
 	PrintK("Enabling LAPIC.\n");
 	enable_lapic();
+	lapic_timer_init(0xFF);
 	PrintK("Processor online.\n");
 	for(;;)
 		asm("hlt");

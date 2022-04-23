@@ -201,6 +201,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	InitializeIdt();
 
+	unmask_irq(0x1);
+	unmask_irq(0x2);
 	startup_aps(smp_info);
 	
 	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
@@ -208,9 +210,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	// This works, but keyboard input breaks.
 	//ioapic_route_irq_to_bsp(1, 0x21, 0);
 	//ioapic_set_gsi_mask(0x1, 0);
-	unmask_irq(0x1);
-	register_pit_handler();
-	unmask_irq(0x2);
+	// Try moving this up later.
 	
 	font_obj.rgb = (RGB) {255, 0, 0};
 	ClearScreen((RGB) {0, 0, 0});

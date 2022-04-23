@@ -60,6 +60,9 @@ set_pit_periodic(uint16_t hz);
 void
 register_pit_handler(void (*handler)(void));
 
+uint32_t
+read_pit_count();
+
 void (*get_timer_handler(void))(void);
 
 #endif

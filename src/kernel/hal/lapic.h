@@ -60,30 +60,41 @@ typedef enum {
 } timer_mode_t;
 
 /** Local Vector Table (LVT) entry. **/
-typedef struct {
-	uint8_t  vector;
-	unsigned delivery_mode 				: 3;
-	unsigned reserved0					: 1;
-	unsigned delivery_status			: 1;
-	unsigned pin_polarity 				: 1;
-	unsigned remote_irr_flag 			: 1;
-	unsigned trigger_mode 				: 1;
-	unsigned mask						: 1;
-	unsigned timer_mode 				: 2;
-	unsigned reserved1 					: 12;
-} __attribute__((packed)) lvt_entry_t;
+typedef union {
+	struct {
+		uint8_t  vector;
+		unsigned delivery_mode 				: 3;
+		unsigned reserved0					: 1;
+		unsigned delivery_status			: 1;
+		unsigned pin_polarity 				: 1;
+		unsigned remote_irr_flag 			: 1;
+		unsigned trigger_mode 				: 1;
+		unsigned mask						: 1;
+		unsigned timer_mode 				: 2;
+		unsigned reserved1 					: 12;
+	} __attribute__((packed));
 
-typedef struct {
-	uint8_t vector;
-	unsigned delivery_mode				: 3;
-	unsigned delivery_status			: 1;
-	unsigned reserved0					: 1;
-	unsigned level						: 1;
-	unsigned trigger_mode				: 1;
-	unsigned reserved1					: 2;
-	unsigned destination_shorthand		: 2;
-	uint64_t reserved2					: 36;
-	uint8_t destination_field;
+	uint32_t dword;
+} lvt_entry_t;
+
+typedef union {
+	struct {
+		uint8_t vector;
+		unsigned delivery_mode				: 3;
+		unsigned delivery_status			: 1;
+		unsigned reserved0					: 1;
+		unsigned level						: 1;
+		unsigned trigger_mode				: 1;
+		unsigned reserved1					: 2;
+		unsigned destination_shorthand		: 2;
+		uint64_t reserved2					: 36;
+		uint8_t destination_field;
+	};
+
+	struct {
+		uint32_t lower_dword;
+		uint32_t upper_dword;
+	};
 } __attribute__((packed)) ipi_t;
 
 
@@ -116,5 +127,8 @@ set_eoi_broadcast(bool enabled);
 
 void
 send_ipi(ipi_t *ipi);
+
+void
+lapic_timer_init(uint8_t vector);
 
 #endif
