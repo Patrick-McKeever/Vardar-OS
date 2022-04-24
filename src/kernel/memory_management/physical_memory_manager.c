@@ -12,7 +12,6 @@ static void SetPageUsed(int index);
 static void SetPageFree(int index);
 static bool PageIsUsed(int index);
 
-
 bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 {
 	// The stivale boot structure does not guarantee any particular order for
@@ -67,6 +66,40 @@ void *AllocFirstFrame()
 			// as "usable" in memmap) be identity-mapped. As such, this function
 			// will return an identity-mapped address, since PMM only tracks
 			// usable entries.
+			return frame;
+		}
+	}
+	return NULL;
+}
+
+void *AllocContiguous(size_t size)
+{
+	uint64_t num_pages = (size / FRAME_SIZE) + (size % FRAME_SIZE > 0 ? 1 : 0);
+	
+	for(int head = 0; head < PHYS_MEMORY_MAP.num_entries; ++head) {
+		bool found_chunk = true;
+		int tail;
+		// Now, start from head and advance forward. If there are
+		// "num_pages" free page frames following the head page, then
+		// allocate it. If you find a used one before that, break.
+		for(tail = head; tail < num_pages; ++tail) {
+			if(PageIsUsed(tail)) {
+				found_chunk = false;
+				head = tail;
+				break;
+			}
+		}
+	
+		// If a sufficiently large contiguous region exists,
+		// set it to 0 and break.
+		if(found_chunk) {
+			int i;
+			for(i = head; i <= tail; ++i) {
+				SetPageUsed(i);
+			}
+			
+			void *frame = (void*) (i * FRAME_SIZE);
+			memset(frame, 0, FRAME_SIZE * size);
 			return frame;
 		}
 	}

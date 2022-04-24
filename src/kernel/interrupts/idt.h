@@ -74,6 +74,9 @@ void InitializeIdt();
  */
 void SetIdtEntry(uint8_t vector, void *isr, uint8_t flags);
 
+void idt_mask_vector(uint8_t vector);
+void idt_unmask_vector(uint8_t vector);
+
 /**
  * Set offsets of PICs. (Offset + IRQ = Interrupt Vector). Also configure 
  * master/slave relation of PICs, tell them about the environment, and set 

@@ -40,6 +40,17 @@ void InitializeIdt()
 	LoadIdt((uint64_t) &idt_desc);
 }
 
+void idt_mask_vector(uint8_t vector)
+{
+	
+}
+
+void idt_unmask_vector(uint8_t vector)
+{
+	
+}
+
+
 void SetIdtEntry(uint8_t vector, void *isr, uint8_t flags)
 {
 	IdtEntry *desc 		= 	&IDT[vector];
@@ -148,3 +159,4 @@ void Isr2Handler()
 		timer_handler();
 	end_of_interrupt(false, 0x22);
 }
+

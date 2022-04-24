@@ -59,8 +59,7 @@ disable_lapic()
 uint8_t
 get_lapic_id() 
 {
-	// Bits 24-31 of spurious int register.
-	uint32_t id_register 	= 	lapic_read(LAPIC_SPURIOUS_INT_REG);
+	uint32_t id_register 	= 	lapic_read(LAPIC_ID_REG);
 	uint8_t id 				=	(id_register >> 24);
 	return id;
 }
@@ -169,10 +168,7 @@ lapic_timer_init(uint8_t vector)
 
 	// Busy-wait until PIT counter reaches certain value.
 	// W/ rate of 1000hz and 100 tics, this will take 1μs.
-	while(PIT_COUNT < total_pit_tics)
-	{
-		PrintK("");
-	}
+	while(PIT_COUNT < total_pit_tics);
 
 	uint32_t final_lapic_count	=	lapic_read(LAPIC_CURRENT_COUNT_REG);
 	uint32_t total_lapic_tics	=	(init_lapic_count - final_lapic_count) * 8;

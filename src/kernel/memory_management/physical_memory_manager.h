@@ -4,6 +4,7 @@
 #include "stivale2.h"
 #include "utils/misc.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 #define FRAME_SIZE 					4096
 #define ADDR_TO_FRAME_IND(addr) 	addr / FRAME_SIZE
@@ -38,11 +39,15 @@ bool InitPmm(struct stivale2_struct_tag_memmap *memmap);
  */
 void *AllocFirstFrame();
 
+void *AllocContiguous(size_t size);
+
+
 /**
  * Free an allocated frame.
  * @input frame an allocated piece page frame.
  */
 void FreeFrame(void *frame);
+
 
 /**
  * @return The number of page frames which are free for use.

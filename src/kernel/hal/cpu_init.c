@@ -8,6 +8,7 @@ static uint8_t bsp_lapic_id;
 void startup_aps(struct stivale2_struct_tag_smp *cpu_info)
 {
 	enable_lapic();
+	lapic_timer_init(0xFF);
 	bsp_lapic_id = cpu_info->bsp_lapic_id;
 	for(int i = 0; i < cpu_info->cpu_count; ++i) {
 		if(cpu_info->smp_info[i].lapic_id != cpu_info->bsp_lapic_id) {
