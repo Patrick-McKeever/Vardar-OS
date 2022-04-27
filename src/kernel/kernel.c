@@ -155,6 +155,8 @@ static Font *global_font;
 #include "acpi/acpi.h"
 #include "hal/cpu_init.h"
 #include "hal/io_apic.h"
+#include "memory_management/kheap.h"
+#include "gdt/gdt.h"
 Terminal term;
 
 void (*term_write)(const char *string, size_t length);
@@ -169,6 +171,8 @@ void print_key(KeyInfo *key_info)
 
 void _start(struct stivale2_struct *stivale2_struct) {
 	__asm__("cli");
+	initialize_gdt((uint64_t) &stack);
+
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
 	struct stivale2_struct_tag_memmap *memmap;
@@ -206,6 +210,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	startup_aps(smp_info);
 	
 	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
+	//void *a = kalloc(20);
 
 	// This works, but keyboard input breaks.
 	//ioapic_route_irq_to_bsp(1, 0x21, 0);
