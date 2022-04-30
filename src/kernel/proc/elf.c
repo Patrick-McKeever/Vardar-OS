@@ -83,7 +83,6 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	pcb->registers.rsp = DEFAULT_STACK_BASE;
 
 	paddr = VAddrToPAddr(pcb->pagemap, DEFAULT_STACK_BASE);
-	PrintK("PGTBL ROOT IS: 0x%x", (uintptr_t) &pcb->pagemap);
 	//asm volatile("mov %0, %%cr3" ::"r"((uintptr_t) &pcb->pagemap):);
 	PrintK("Stack paddr listed as 0x%h, should be 0x%h\n", paddr, (uintptr_t) stack);
 

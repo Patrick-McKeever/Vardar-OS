@@ -1,11 +1,13 @@
 #include "proc.h"
 #include "gdt/gdt.h"
+#include "memory_management/virtual_memory_manager.h"
 
 void
 run_proc(pcb_t *pcb)
 {
 	uint64_t ds_segsel = USER_DS_SEGSEL;
 	uint64_t cs_segsel = USER_CS_SEGSEL;
+	uint64_t pt_paddr = KernelVAddrToPAddr((uintptr_t) pcb->pagemap);
 
 	asm volatile(
 			"push %0\n\t"
@@ -68,7 +70,7 @@ run_proc(pcb_t *pcb)
 			"g"(pcb->registers.rsp),
 			"g"(cs_segsel),
 			"g"(pcb->registers.rip),
-			"g"((uintptr_t) &pcb->pagemap),
+			"r"(pt_paddr),
 			"g"(pcb->registers.rbp)
 		:
 	);
