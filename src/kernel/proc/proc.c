@@ -6,6 +6,7 @@ run_proc(pcb_t *pcb)
 {
 	uint64_t ds_segsel = USER_DS_SEGSEL;
 	uint64_t cs_segsel = USER_CS_SEGSEL;
+
 	asm volatile(
 			"push %0\n\t"
 			"push %1\n\t"

@@ -1,11 +1,8 @@
-CC := /usr/local/x86_64-elfgcc/bin/x86_64-elf-gcc
-#CC := gcc
-#LD := ld
+C := ../crosstools/x86_64-elf-gcc
 AS := nasm
-LD := /usr/local/x86_64-elfgcc/bin/x86_64-elf-ld 
+LD := ../crosstools/x86_64-elf-ld
 
 CFLAGS := 				 	\
-	-I ./kernel/		 	\
 	-std=gnu11			 	\
 	-fms-extensions			\
 	-O0	-pipe -g		 	\
@@ -33,28 +30,50 @@ XORISSOFLAGS := -as mkisofs -b limine-cd.bin \
 QEMUFLAGS := -m 2G -d int -M smm=off -D ./log.txt -smp 2
 
 
-CFILES := $(shell find ./ -type f -name '*.c')
-ASMFILES := $(shell find ./ -type f -name '*.asm')
-OBJ_C := $(CFILES:.c=.o)
-OBJ_ASM := $(ASMFILES:.asm=.o)
-OBJ := $(OBJ_C) $(OBJ_ASM)
+KERN_CFILES := $(shell find ./kernel -type f -name '*.c')
+KERN_ASMFILES := $(shell find ./kernel -type f -name '*.asm')
+KERN_OBJ_C := $(KERN_CFILES:.c=.o)
+KERN_OBJ_ASM := $(KERN_ASMFILES:.asm=.o)
+KERN_OBJ := $(KERN_OBJ_C) $(KERN_OBJ_ASM)
+
+USER_CFILES := $(shell find ./userspace -type f -name '*.c')
+USER_ASMFILES := $(shell find ./userspace -type f -name '*.asm')
+USER_OBJ_C := $(USER_CFILES:.c=.elf)
+USER_OBJ_ASM := $(USER_ASMFILES:.asm=.elf)
+USER_OBJ := $(USER_OBJ_C) $(USER_OBJ_ASM)
 
 KERNEL := kernel.elf
 .PHONY: all clean
 
-all: $(KERNEL)
+all: $(KERNEL) $(USER_OBJ)
 
-$(KERNEL): $(OBJ)
-	$(LD) $(LDFLAGS) $(OBJ) -o $@
+$(KERNEL): $(KERN_OBJ)
+	$(LD) $(LDFLAGS) $(KERN_OBJ) -o $@
 
+$(USERSPACE): $(USER_OBJ)
+
+# These .o rules should only be called for kernel binaries.
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I ./kernel/ -c $< -o $@
 
 %.o: %.asm
 	$(AS) $(ASFLAGS) $< -o $@
 
+# These elf rules will only be called for userspace binaries.
+%.elf: %.c
+	$(CC) $(CFLAGS) $< -o $@
+
+%.elf: %.asm
+	$(eval INP_NO_EXT := $(basename $<))
+	$(AS) $(ASFLAGS) $< -o "$(INP_NO_EXT).o"
+	$(LD) "$(INP_NO_EXT).o" -o $@
+
+INITRD := userspace/initrd.ustar
+USERSPACE_ELFS := $(shell find ./userspace -type f -name '*.elf' | xargs echo)
+
 run:
-	cp -v kernel.elf limine.cfg iso_root/
+	tar --create --file $(INITRD) $(USERSPACE_ELFS)
+	cp -v kernel.elf $(INITRD) limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
 	../limine/limine-install bin/image.iso
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso $(QEMUFLAGS)

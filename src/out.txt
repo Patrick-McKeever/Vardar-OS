@@ -1,0 +1,3 @@
+echo ".asm: Parsing userspace/fetch.asm"
+.asm: Parsing userspace/fetch.asm
+nasm -felf64 userspace/fetch.asm -o userspace/fetch.asm.o
