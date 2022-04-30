@@ -1,25 +1,33 @@
 #ifndef USTAR_H
 #define USTAR_H
+
+#define BLOCK_SIZE 512
+
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct {
-	char		name[100];
-	uint64_t 	mode;
-	uint64_t	uid;
-	uint64_t	gid;
-	uint8_t		size[12];
-	uint64_t	checksum;
-	uint8_t		filetype;
-	char		link_name[100];
-	char		signature[6];
-	uint16_t	version;
-	uint8_t		owner[32];
-	uint8_t		group[32];
-	uint64_t	device_major;
-	uint64_t	device_minor;
-	uint8_t		prefix[155];
-} ustar_header_t;
+
+typedef union {
+	struct {
+		char 		name[100];     
+		char 		mode[8];       		
+		char 		uid[8];        
+		char 		gid[8];        
+		char 		size[12];      
+		char 		mtime[12];     
+		char 		checksum[8];      
+		char 		filetype;          
+		char 		link_name[100];
+		char 		signature[6];
+		uint16_t 	version;
+		char 		owner[32];
+		char 		group[32];
+		uint64_t 	device_major;
+		uint64_t 	deivce_minor;
+		uint8_t 	prefix[155];
+	} __attribute__((packed));
+	char block[512];
+} ustar_entry_t;
 
 typedef enum {
 	USTAR_REGULAR		=		0x30,
@@ -30,5 +38,11 @@ typedef enum {
 	USTAR_DIR			=		0x35,
 	USTAR_PIPE			=		0x36
 } ustar_filetype_t;
+
+char *
+ustar_read(void *ustar, const char *const filename);
+
+ustar_entry_t**
+ustar_readdir(void *ustar, const char *const dirname);
 
 #endif

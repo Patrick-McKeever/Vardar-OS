@@ -1,7 +1,7 @@
 #include "string.h"
 #include <stdint.h>
 
-void *memset (void *dest, int val, size_t len)
+void *memset(void *dest, int val, size_t len)
 {
   uint8_t *ptr = (uint8_t *) dest;
   while (len-- > 0)
@@ -38,4 +38,46 @@ int strncmp(const char *s1, const char *s2, size_t n)
     else {
         return (*(unsigned char *)s1 - *(unsigned char *)s2);
     }
+}
+
+char *strcpy(char *destination, const char *source) {
+    if (destination == NULL) {
+        return NULL;
+    }
+ 
+    char *ptr = destination; 
+    while (*source != '\0') {
+        *destination = *source;
+        destination++;
+        source++;
+    }
+ 
+    *destination = '\0';
+    return ptr;
+}
+
+int strcmp(const char *X, const char *Y) {
+    while (*X) {
+        // if characters differ, or end of the second string is reached
+        if (*X != *Y) {
+            break;
+        }
+ 
+        // move to the next pair of characters
+        X++;
+        Y++;
+    }
+ 
+    // return the ASCII difference after converting `char*` to `unsigned char*`
+    return *(const unsigned char*)X - *(const unsigned char*)Y;
+}
+
+unsigned int strlen(const char *s) {
+    unsigned int count = 0;
+    while(*s!='\0')
+    {
+        count++;
+        s++;
+    }
+    return count;
 }

@@ -19,6 +19,13 @@
 #define REAL_M_SEG			0b10000000
 #define PROT_M_SEG			0b11001111
 
+// Bytes 0-1 give ring, byte 2 is 0 for GDT, bytes 3-15 give
+// bytes 3-15 of segment offset from GDT in bytes.
+#define KERN_CS_SEGSEL		0x28
+#define KERN_DS_SEGSEL		0x30
+#define USER_CS_SEGSEL		0x35
+#define USER_DS_SEGSEL		0x37
+
 #include <stdint.h>
 #include <stddef.h>
 

@@ -29,7 +29,7 @@ void init_tss(uint64_t stack)
 
 static inline void load_tss(uint16_t tss_selector)
 {
-    asm volatile("ltr %%ax" :: "a"(0x48) : "memory");
+    asm volatile("ltr %%ax" :: "a"(tss_selector) : "memory");
 }
 
 void
@@ -96,21 +96,22 @@ initialize_gdt(uint64_t stack)
     GDT.segments[6].limit_and_flags = 0xA0;
     GDT.segments[6].base_high = 0;
 
-    // 64 bit user DS
+    // 64 bit user CS
     GDT.segments[7].limit = 0;
     GDT.segments[7].base_low = 0;
     GDT.segments[7].base_mid = 0;
-    GDT.segments[7].access = 0xF2;
-    GDT.segments[7].limit_and_flags = 0;
+    GDT.segments[7].access = 0xFA;
+    GDT.segments[7].limit_and_flags = 0x20;
     GDT.segments[7].base_high = 0;
 
-    // 64 bit user CS
+    // 64 bit user DS
     GDT.segments[8].limit = 0;
     GDT.segments[8].base_low = 0;
     GDT.segments[8].base_mid = 0;
-    GDT.segments[8].access = 0xFA;
-    GDT.segments[8].limit_and_flags = 0x20;
+    GDT.segments[8].access = 0xF2;
+    GDT.segments[8].limit_and_flags = 0;
     GDT.segments[8].base_high = 0;
+
 
 	init_tss(stack);
 

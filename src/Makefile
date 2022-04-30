@@ -7,7 +7,7 @@ LD := /usr/local/x86_64-elfgcc/bin/x86_64-elf-ld
 CFLAGS := 				 	\
 	-I ./kernel/		 	\
 	-std=gnu11			 	\
-	-fms-extensions	\
+	-fms-extensions			\
 	-O0	-pipe -g		 	\
 	-ffreestanding       	\
 	-fno-stack-protector 	\
