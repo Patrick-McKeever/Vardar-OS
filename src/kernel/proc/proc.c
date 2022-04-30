@@ -68,7 +68,7 @@ run_proc(pcb_t *pcb)
 			"g"(pcb->registers.rsp),
 			"g"(cs_segsel),
 			"g"(pcb->registers.rip),
-			"g"(pcb->pagemap),
+			"g"((uintptr_t) &pcb->pagemap),
 			"g"(pcb->registers.rbp)
 		:
 	);

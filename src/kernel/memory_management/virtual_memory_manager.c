@@ -185,6 +185,9 @@ uint64_t VAddrToPAddr(uint64_t *table, uint64_t vaddr)
 	for(int i = 4; i > 1; --i) {
 		uint64_t tab_index = V_ADDR_INDEX(vaddr, i);
 		child_table = GetPageTable(parent_table, tab_index);
+		if(!child_table) {
+			return 0;
+		}
 		parent_table = child_table;
 	}
 	// Get rid of flags.

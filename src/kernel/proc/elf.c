@@ -34,8 +34,14 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// The process level pagemap should still contain all relevant kernel data,
 	// which is necessary to restore kernel state after interrupts. (Also, you
 	// can't just throw out things like the GDT, IDT, etc.) Here, we create those
-	// mappings in the process-level pagemap.
+	// mappings in the process-level pagemap. So, map 0x1000-4GiB to higher half,
+	// and map PMRs as specified.
+	uint64_t four_gb = 0x100000000;
 	MapKernelPmrs(pcb->pagemap);
+	MapMultiple(pcb->pagemap, 0x1000, four_gb, KERNEL_DATA, KERNEL_PAGE);
+
+	uint64_t paddr = VAddrToPAddr(pcb->pagemap, 0xffffffff80000b64);
+	PrintK("Inst paddr listed as 0x%h, should be 0x%h\n", paddr, 0xffffffff80000b64);
 
 	// Find entry point, set RIP equal to entry point.
 	uint64_t entry_pt = header->entry_pt;
@@ -76,8 +82,11 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	pcb->registers.rbp = DEFAULT_STACK_BASE;
 	pcb->registers.rsp = DEFAULT_STACK_BASE;
 
-	uint64_t paddr = VAddrToPAddr(pcb->pagemap, DEFAULT_STACK_BASE);
-	PrintK("Stack paddr listed as 0x%h, should be 0x%h\n", (uintptr_t) paddr, paddr);
+	paddr = VAddrToPAddr(pcb->pagemap, DEFAULT_STACK_BASE);
+	PrintK("PGTBL ROOT IS: 0x%x", (uintptr_t) &pcb->pagemap);
+	//asm volatile("mov %0, %%cr3" ::"r"((uintptr_t) &pcb->pagemap):);
+	PrintK("Stack paddr listed as 0x%h, should be 0x%h\n", paddr, (uintptr_t) stack);
+
 
 	// As of now, we are not attempting to parse section headers. However, this will
 	// become relevant when we attempt to make a dynamic linker.

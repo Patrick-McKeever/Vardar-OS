@@ -84,7 +84,7 @@ run-monitor:
 	cp -v kernel.elf $(INITRD) limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
 	../limine/limine-install bin/image.iso
-	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -monitor stdio $(QEMUFLAGS)
+	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -no-reboot -no-shutdown -monitor stdio $(QEMUFLAGS)
 
 run-no-shutdown:
 	tar --create --file $(INITRD) $(USERSPACE_ELFS)
