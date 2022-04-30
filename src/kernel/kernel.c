@@ -77,9 +77,16 @@ static struct stivale2_struct_tag_pmrs pmr_tag = {
 	}
 };
 
-static struct stivale2_struct_tag_rsdp rsdp_tag = {
+static struct stivale2_struct_tag_modules modules_tag = {
 	.tag = {
 		.next = (uintptr_t) &pmr_tag,
+		.identifier = STIVALE2_STRUCT_TAG_MODULES_ID
+	}
+};
+
+static struct stivale2_struct_tag_rsdp rsdp_tag = {
+	.tag = {
+		.next = (uintptr_t) &modules_tag,
 		.identifier = STIVALE2_STRUCT_TAG_RSDP_ID
 	}
 };
@@ -157,6 +164,8 @@ static Font *global_font;
 #include "hal/io_apic.h"
 #include "memory_management/kheap.h"
 #include "gdt/gdt.h"
+#include "vfs/ustar.h"
+#include "proc/elf.h"
 Terminal term;
 
 void (*term_write)(const char *string, size_t length);
@@ -172,6 +181,9 @@ void print_key(KeyInfo *key_info)
 void _start(struct stivale2_struct *stivale2_struct) {
 	__asm__("cli");
 	initialize_gdt((uint64_t) &stack);
+
+	struct stivale2_struct_tag_modules *mods;
+	mods = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MODULES_ID);
 
 	struct stivale2_struct_tag_framebuffer *fb;
 	fb = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
@@ -200,10 +212,24 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	Font font_obj = InitGnuFont((RGB) {255, 255, 255}, (Dimensions) {9,16});
 	global_font = &font_obj;
 	InitPmm(memmap);
+
+
 	InitAcpi(*rsdp_addr_tag);
 	ParseMadt();
 	InitPageTable(memmap, kern_base_addr, pmrs);
 	InitializeIdt();
+
+	// Initialize heap.
+	init_heap(0x20000);
+	void *initrd = ustar_from_module(mods, "boot:///initrd.ustar");
+	char *fetch;
+	if(initrd) {
+		fetch = ustar_read(initrd, "./userspace/fetch.elf");
+	}
+
+	pcb_t fetch_pcb;
+	parse_elf((char*) fetch, &fetch_pcb);
+	run_proc(&fetch_pcb);
 
 	unmask_irq(0x1);
 	unmask_irq(0x2);

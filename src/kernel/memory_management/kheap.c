@@ -50,12 +50,14 @@ heap_pos(uint32_t *pos);
 
 void init_heap(size_t heap_size)
 {
+	PrintK("Initializing heap.\n");
     HEAP_START = AllocContiguous(heap_size);
     HEAP_SIZE = heap_size;
     uint32_t *heap_header = (uint32_t*) HEAP_START;
     *heap_header = heap_size - MDATA_SIZE;
     uint32_t *heap_footer = (uint32_t*) (HEAP_START + HEADER_SIZE + *heap_header);
     *heap_footer = *heap_header;
+	PrintK("Heap initialized at 0x%h.\n", (uintptr_t) HEAP_START);
 }
 
 void *kalloc(size_t size)

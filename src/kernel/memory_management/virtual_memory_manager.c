@@ -4,6 +4,8 @@
 
 // Static declarations.
 static uint64_t *KERNEL_PAGE_TABLE_ROOT;
+static struct stivale2_struct_tag_kernel_base_address *BASE_ADDR;
+static struct stivale2_struct_tag_pmrs *PMRs;
 
 static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, uint64_t index, 
 											 uint16_t flags);
@@ -15,26 +17,51 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 				   struct stivale2_struct_tag_kernel_base_address *kern_base_addr,
 				   struct stivale2_struct_tag_pmrs *pmrs)
 {
+	// We'll store these locally in the file for convenience.
+	BASE_ADDR = kern_base_addr;
+	PMRs = pmrs;
+
 	KERNEL_PAGE_TABLE_ROOT = AllocFirstFrame();
 	if(KERNEL_PAGE_TABLE_ROOT == NULL)
 		return false;
 	
 	bool success = true;
+	success &= MapKernelPmrs(KERNEL_PAGE_TABLE_ROOT);
 
-	// Because we requested fully virtual mappings, we cannot immediately calc-
-	// ulate the correspondence between a virtual higher-half address and a
-	// physical address using offsets. Instead, we accept that the kernel will
-	// be placed at some arbitrary physical address and mapped to some arbitrary
-	// virtual address, and trust that the bootloader will report them correctly.
-	uint64_t kern_phys_base = kern_base_addr->physical_base_address;
-	uint64_t kern_virt_base = kern_base_addr->virtual_base_address;
-	uint16_t kernel_mem = PRESENT | READ_WRITABLE;
+	// Identity map 0x1000-4GiB.
+	uint64_t four_gb = 0x100000000;
+	success &= MapMultipleKernel(0x1000, four_gb, 0, KERNEL_PAGE);
+	// Map 0x1000-4GiB to higher half for kernel data.
+	success &= MapMultipleKernel(0x1000, four_gb, KERNEL_DATA, KERNEL_PAGE);
+	
+	for(uint32_t i = 0; i < memmap->entries; ++i) {
+		uint64_t base = memmap->memmap[i].base;
+		uint64_t bound = base + memmap->memmap[i].length;
+
+		// If we already mapped this, continue.
+		if(bound <= 0x100000000)
+			continue;	
+		
+		success &= MapMultipleKernel(base, bound, 0, KERNEL_PAGE);
+		success &= MapMultipleKernel(base, bound, KERNEL_DATA, KERNEL_PAGE);
+	}
+
+	__asm__ volatile("mov %0, %%cr3" :: 
+					 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
+	return success;
+}
+
+bool MapKernelPmrs(uint64_t *page_table_root)
+{
+	bool success = true;
+	uint64_t kern_phys_base = BASE_ADDR->physical_base_address;
+	uint64_t kern_virt_base = BASE_ADDR->virtual_base_address;
 	
 	// Protected memory ranges (PMRs) describe ELF segments of kernel code,
 	// giving their location in physical/virtual memory as determined by the
 	// stivale2 bootloader. Here, we map all segments of kernel code.
-	for(uint64_t i = 0; i < pmrs->entries; ++i) {
-		struct stivale2_pmr pmr = pmrs->pmrs[i];
+	for(uint64_t i = 0; i < PMRs->entries; ++i) {
+		struct stivale2_pmr pmr = PMRs->pmrs[i];
 		uint64_t virt = pmr.base;
 		uint64_t phys = kern_phys_base + (pmr.base - kern_virt_base);
 		uint64_t len  = pmr.length;
@@ -42,31 +69,9 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 		// Map all page frames in PMR to a virtual address determined by the
 		// offset between the PMR's physical and virtual address. 
 		uint64_t offset	= virt - phys;
-		success &= MapMultipleKernel(phys, phys + len, offset, kernel_mem);
-		TestKernelMapping(phys, phys + offset);
+		success &= MapMultiple(page_table_root, phys, phys + len, offset, KERNEL_PAGE);
+		// TestKernelMapping(phys, phys + offset);
 	}
-
-	// Identity map 0x1000-4GiB.
-	uint64_t four_gb = 0x100000000;
-	success &= MapMultipleKernel(0x1000, four_gb, 0, kernel_mem);
-	// Map 0x1000-4GiB to higher half for kernel data.
-	success &= MapMultipleKernel(0x1000, four_gb, KERNEL_DATA, kernel_mem);
-	
-	for(uint32_t i = 0; i < memmap->entries; ++i) {
-		uint64_t base = memmap->memmap[i].base;
-		uint64_t bound = base + memmap->memmap[i].length;
-		uint64_t type = memmap->memmap[i].type;
-
-		// If we already mapped this, continue.
-		if(bound <= 0x100000000)
-			continue;	
-		
-		success &= MapMultipleKernel(base, bound, 0, kernel_mem);
-		success &= MapMultipleKernel(base, bound, KERNEL_DATA, kernel_mem);
-	}
-	
-	__asm__ volatile("mov %0, %%cr3" :: 
-					 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
 	return success;
 }
 

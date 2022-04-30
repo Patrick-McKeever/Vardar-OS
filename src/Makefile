@@ -69,6 +69,7 @@ $(USERSPACE): $(USER_OBJ)
 	$(LD) "$(INP_NO_EXT).o" -o $@
 
 INITRD := userspace/initrd.ustar
+# Have this "find" chop off the "userspace" dir at start.
 USERSPACE_ELFS := $(shell find ./userspace -type f -name '*.elf' | xargs echo)
 
 run:
@@ -79,19 +80,22 @@ run:
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso $(QEMUFLAGS)
 	
 run-monitor:
-	cp -v kernel.elf limine.cfg iso_root/
+	tar --create --file $(INITRD) $(USERSPACE_ELFS)
+	cp -v kernel.elf $(INITRD) limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
 	../limine/limine-install bin/image.iso
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -monitor stdio $(QEMUFLAGS)
 
 run-no-shutdown:
-	cp -v kernel.elf limine.cfg iso_root/
+	tar --create --file $(INITRD) $(USERSPACE_ELFS)
+	cp -v kernel.elf $(INITRD) limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso
 	../limine/limine-install bin/image.iso
 	qemu-system-x86_64 -drive format=raw,file=bin/image.iso -no-reboot -no-shutdown $(QEMUFLAGS) 
 
 debug:
-	cp -v kernel.elf limine.cfg iso_root/                                       
+	tar --create --file $(INITRD) $(USERSPACE_ELFS)
+	cp -v kernel.elf $(INITRD) limine.cfg iso_root/
 	xorriso $(XORISSOFLAGS) iso_root -o bin/image.iso 
 	../limine/limine-install bin/image.iso
 	gdb --command=debug.gdb

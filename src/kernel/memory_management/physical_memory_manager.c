@@ -40,13 +40,22 @@ bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 
 	// Now set the usable ones as free (aside from the page containing the bmp).
 	for(int i = 0; i < memmap->entries; ++i) {
-		struct stivale2_mmap_entry page_frame = memmap->memmap[i];
-		if(page_frame.type == USABLE_PAGE && i != bmp_ind) {
-			size_t starting_page = memmap->memmap[i].base / FRAME_SIZE;
-			size_t ending_page = starting_page + memmap->memmap[i].length / 
-								 FRAME_SIZE;
+		struct stivale2_mmap_entry mmap_entry = memmap->memmap[i];
+		if(mmap_entry.type == USABLE_PAGE && i != bmp_ind) {
+
+			size_t starting_page = mmap_entry.base / FRAME_SIZE;
+			size_t ending_page = starting_page + mmap_entry.length / FRAME_SIZE;
+
+
 			for(int i = starting_page; i < ending_page; ++i) {
 				SetPageFree(i);
+			}
+
+			// When searching for free page frames, PMM should begin w/ first
+			// usable frame, so assign last_used to this page if it's not yet
+			// set.
+			if(PHYS_MEMORY_MAP.last_used == 0) {
+				PHYS_MEMORY_MAP.last_used = starting_page - 1;
 			}
 		}
 	}
@@ -56,9 +65,12 @@ bool InitPmm(struct stivale2_struct_tag_memmap *memmap)
 
 void *AllocFirstFrame() 
 {
-	for(int i = 0; i < PHYS_MEMORY_MAP.num_entries; ++i) {
+	for(int i = PHYS_MEMORY_MAP.last_used + 1; i != PHYS_MEMORY_MAP.last_used; 
+			i = (i + 1) % PHYS_MEMORY_MAP.num_entries) 
+	{
 		if(! PageIsUsed(i)) {
 			SetPageUsed(i);
+			PHYS_MEMORY_MAP.last_used = i;
 			void *frame = (void*)((size_t) i * FRAME_SIZE);
 			memset(frame, 0, FRAME_SIZE);
 
@@ -76,13 +88,15 @@ void *AllocContiguous(size_t size)
 {
 	uint64_t num_pages = (size / FRAME_SIZE) + (size % FRAME_SIZE > 0 ? 1 : 0);
 	
-	for(int head = 0; head < PHYS_MEMORY_MAP.num_entries; ++head) {
+	for(size_t head = PHYS_MEMORY_MAP.last_used + 1; head != PHYS_MEMORY_MAP.last_used; 
+		head = (head + 1) % PHYS_MEMORY_MAP.num_entries) 
+	{
 		bool found_chunk = true;
 		int tail;
 		// Now, start from head and advance forward. If there are
 		// "num_pages" free page frames following the head page, then
 		// allocate it. If you find a used one before that, break.
-		for(tail = head; tail < num_pages; ++tail) {
+		for(tail = head; (tail - head) <= num_pages; ++tail) {
 			if(PageIsUsed(tail)) {
 				found_chunk = false;
 				head = tail;
@@ -93,13 +107,13 @@ void *AllocContiguous(size_t size)
 		// If a sufficiently large contiguous region exists,
 		// set it to 0 and break.
 		if(found_chunk) {
-			int i;
-			for(i = head; i <= tail; ++i) {
+			for(int i = head; i <= tail; ++i) {
 				SetPageUsed(i);
 			}
 			
-			void *frame = (void*) (i * FRAME_SIZE);
-			memset(frame, 0, FRAME_SIZE * size);
+			void *frame = (void*) (head * FRAME_SIZE);
+			memset(frame, 0, FRAME_SIZE * num_pages);
+			PHYS_MEMORY_MAP.last_used = head + num_pages;
 			return frame;
 		}
 	}
@@ -170,7 +184,7 @@ static int FindMemEntryBySize(struct stivale2_struct_tag_memmap *memmap,
 static void SetPageUsed(int index)
 {
 	uint8_t *bmp_entry_byte = &PHYS_MEMORY_MAP.bitmap[index / 8];
-	SetNthBit(bmp_entry_byte, index % 8);
+	*bmp_entry_byte |= (1 << (index % 8));
 }
 
 /**
@@ -180,7 +194,7 @@ static void SetPageUsed(int index)
 static void SetPageFree(int index)
 {
 	uint8_t *bmp_entry_byte = &PHYS_MEMORY_MAP.bitmap[index / 8];
-	ClearNthBit(bmp_entry_byte, index % 8);
+	*bmp_entry_byte &= ~(1 << (index % 8));
 }
 
 /**
@@ -189,6 +203,6 @@ static void SetPageFree(int index)
 static bool PageIsUsed(int index)
 {
 	uint8_t bmp_entry_byte = PHYS_MEMORY_MAP.bitmap[index / 8];
-	return GetNthBit(bmp_entry_byte, index % 8);
+	return (bmp_entry_byte >> (index % 8)) & 1;
 }
 

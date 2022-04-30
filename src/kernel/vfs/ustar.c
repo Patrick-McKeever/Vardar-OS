@@ -16,6 +16,18 @@ oct2bin(char *str, int size)
 	return n;
 }
 
+void *
+ustar_from_module(struct stivale2_struct_tag_modules *mods, const char *const ustar_name)
+{
+	for(size_t i = 0; i < mods->module_count; ++i) {
+		if(!strcmp(mods->modules[i].string, ustar_name)) {
+			return (void*) mods->modules[i].begin;
+		}
+	}
+	return NULL;
+}
+
+
 char*
 ustar_read(void *ustar, const char *const filename)
 {

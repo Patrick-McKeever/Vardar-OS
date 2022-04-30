@@ -22,6 +22,9 @@
 #define PAGE_ATTRIBUTE_TABLE		(1 << 7)	
 #define GLOBAL						(1 << 8)	
 
+#define KERNEL_PAGE					PRESENT | READ_WRITABLE
+#define USER_PAGE					PRESENT | READ_WRITABLE | USER_ACCESSIBLE
+
 // 512 entries per table, of 4KiB pages each.
 #define LOG2_ENTRIES_PER_TABLE		9
 #define LOG2_FRAME_SIZE				12
@@ -58,6 +61,8 @@
 bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 				   struct stivale2_struct_tag_kernel_base_address *kern_base_addr,
 				   struct stivale2_struct_tag_pmrs *pmrs);
+
+bool MapKernelPmrs(uint64_t *page_table_root);
 
 /**
  * Given a PML4 table and a virtual address, return a pointer to the page table

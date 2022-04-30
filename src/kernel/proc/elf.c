@@ -3,6 +3,7 @@
 #include "memory_management/physical_memory_manager.h"
 #include "memory_management/virtual_memory_manager.h"
 #include "utils/string.h"
+#include "stivale2.h"
 
 static const char ELF_MAGIC[4] = { 0x7F, 'E', 'L', 'F' };
 static const uint16_t USER_PROC_PAGE = PRESENT | READ_WRITABLE | USER_ACCESSIBLE;
@@ -29,6 +30,12 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 		PrintK("ELF magic not detected.\n");
 		return -1;
 	}
+
+	// The process level pagemap should still contain all relevant kernel data,
+	// which is necessary to restore kernel state after interrupts. (Also, you
+	// can't just throw out things like the GDT, IDT, etc.) Here, we create those
+	// mappings in the process-level pagemap.
+	MapKernelPmrs(pcb->pagemap);
 
 	// Find entry point, set RIP equal to entry point.
 	uint64_t entry_pt = header->entry_pt;
@@ -69,10 +76,13 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	pcb->registers.rbp = DEFAULT_STACK_BASE;
 	pcb->registers.rsp = DEFAULT_STACK_BASE;
 
+	uint64_t paddr = VAddrToPAddr(pcb->pagemap, DEFAULT_STACK_BASE);
+	PrintK("Stack paddr listed as 0x%h, should be 0x%h\n", (uintptr_t) paddr, paddr);
+
 	// As of now, we are not attempting to parse section headers. However, this will
 	// become relevant when we attempt to make a dynamic linker.
-	elf_shdr_t *shdrs = (elf_shdr_t*) (raw_elf + header->shdr_offset);
-	uint8_t *shstrtab = find_shdr_strtab(raw_elf, header->shdr_num_entries, shdrs);
+	//elf_shdr_t *shdrs = (elf_shdr_t*) (raw_elf + header->shdr_offset);
+	//uint8_t *shstrtab = find_shdr_strtab(raw_elf, header->shdr_num_entries, shdrs);
 
 	return 0;
 }

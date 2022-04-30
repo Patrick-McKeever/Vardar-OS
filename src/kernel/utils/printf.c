@@ -3,14 +3,14 @@
 
 static inline void PutChar(char c)
 {
-	//term_write(&c, 1);
+	term_write(&c, 1);
 }
 
 static inline void Puts(char *c)
 {
 	int len;
 	for(len = 0; c[len] != '\0'; ++len) {}
-	//term_write(c, len);
+		term_write(c, len);
 }
 
 bool IN_USE;

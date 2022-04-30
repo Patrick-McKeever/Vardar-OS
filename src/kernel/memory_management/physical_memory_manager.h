@@ -13,6 +13,8 @@
 
 typedef struct {
 	uint64_t num_entries;
+	// The index of the last-used frame.
+	uint64_t last_used;
 	// Number of bytes in bitmap.
 	uint32_t bitmap_size;
 	// Pointer to bytes forming a bitmap, giving the status of pages in memory.

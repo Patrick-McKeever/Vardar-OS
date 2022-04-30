@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
+#include "stivale2.h"
 
 typedef union {
 	struct {
@@ -38,6 +38,9 @@ typedef enum {
 	USTAR_DIR			=		0x35,
 	USTAR_PIPE			=		0x36
 } ustar_filetype_t;
+
+void *
+ustar_from_module(struct stivale2_struct_tag_modules *mods, const char *const ustar_name);
 
 char *
 ustar_read(void *ustar, const char *const filename);
