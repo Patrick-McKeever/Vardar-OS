@@ -38,10 +38,9 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// and map PMRs as specified.
 	uint64_t four_gb = 0x100000000;
 	MapKernelPmrs(pcb->pagemap);
-	MapMultiple(pcb->pagemap, 0x1000, four_gb, KERNEL_DATA, KERNEL_PAGE);
 
-	uint64_t paddr = VAddrToPAddr(pcb->pagemap, 0xffffffff80000b64);
-	PrintK("Inst paddr listed as 0x%h, should be 0x%h\n", paddr, 0xffffffff80000b64);
+	uint64_t paddr = VAddrToPAddr(pcb->pagemap, 0xffffffff80000ba9);
+	PrintK("Inst paddr listed as 0x%h, vaddr 0x%h\n", paddr, 0xffffffff80000ba9);
 
 	// Find entry point, set RIP equal to entry point.
 	uint64_t entry_pt = header->entry_pt;

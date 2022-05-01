@@ -6,6 +6,7 @@
 static uint64_t *KERNEL_PAGE_TABLE_ROOT;
 static struct stivale2_struct_tag_kernel_base_address *BASE_ADDR;
 static struct stivale2_struct_tag_pmrs *PMRs;
+static struct stivale2_struct_tag_memmap *MMAP;
 
 static inline uint64_t *GetOrCreatePageTable(uint64_t *parent, uint64_t index, 
 											 uint16_t flags);
@@ -18,6 +19,7 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 				   struct stivale2_struct_tag_pmrs *pmrs)
 {
 	// We'll store these locally in the file for convenience.
+	MMAP = memmap;
 	BASE_ADDR = kern_base_addr;
 	PMRs = pmrs;
 
@@ -34,18 +36,6 @@ bool InitPageTable(struct stivale2_struct_tag_memmap *memmap,
 	// Map 0x1000-4GiB to higher half for kernel data.
 	success &= MapMultipleKernel(0x1000, four_gb, KERNEL_DATA, KERNEL_PAGE);
 	
-	for(uint32_t i = 0; i < memmap->entries; ++i) {
-		uint64_t base = memmap->memmap[i].base;
-		uint64_t bound = base + memmap->memmap[i].length;
-
-		// If we already mapped this, continue.
-		if(bound <= 0x100000000)
-			continue;	
-		
-		success &= MapMultipleKernel(base, bound, 0, KERNEL_PAGE);
-		success &= MapMultipleKernel(base, bound, KERNEL_DATA, KERNEL_PAGE);
-	}
-
 	__asm__ volatile("mov %0, %%cr3" :: 
 					 "r" ((uint64_t) KERNEL_PAGE_TABLE_ROOT));
 	return success;
@@ -70,8 +60,21 @@ bool MapKernelPmrs(uint64_t *page_table_root)
 		// offset between the PMR's physical and virtual address. 
 		uint64_t offset	= virt - phys;
 		success &= MapMultiple(page_table_root, phys, phys + len, offset, KERNEL_PAGE);
-		// TestKernelMapping(phys, phys + offset);
+		TestKernelMapping(phys, phys + offset);
 	}
+	
+	for(uint32_t i = 0; i < MMAP->entries; ++i) {
+		uint64_t base = MMAP->memmap[i].base;
+		uint64_t bound = base + MMAP->memmap[i].length;
+
+		// If we already mapped this, continue.
+		if(bound <= 0x100000000)
+			continue;	
+		
+		success &= MapMultipleKernel(base, bound, 0, KERNEL_PAGE);
+		success &= MapMultipleKernel(base, bound, KERNEL_DATA, KERNEL_PAGE);
+	}
+
 	return success;
 }
 
