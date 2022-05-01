@@ -13,6 +13,17 @@ run_proc(pcb_t *pcb)
 	asm volatile("mov %0, %%cr3" :: "r"(pt_paddr) :);
 
 	asm volatile(
+			/* DS */
+			"push %14\n\t"
+			/* RSP */
+			"push %15\n\t"
+			/* RFLAGS */
+			"pushfq\n\t"
+			/* CS */
+			"push %16\n\t"
+			/* RIP */
+			"push %17\n\t"
+			"mov %18, %%rbp\n\t"
 			"push %0\n\t"
 			"push %1\n\t"
 			"push %2\n\t"
@@ -41,17 +52,6 @@ run_proc(pcb_t *pcb)
 			"pop %%r13\n\t"
 			"pop %%r14\n\t"
 			"pop %%r15\n\t"
-			/* DS */
-			"push %14\n\t"
-			/* RSP */
-			"push %15\n\t"
-			/* RFLAGS */
-			"pushfq\n\t"
-			/* CS */
-			"push %16\n\t"
-			/* RIP */
-			"push %17\n\t"
-			"mov %18, %%rbp\n\t"
 			"iretq\n\t"
 		:
 		:	"g"(pcb->registers.rax),
@@ -73,7 +73,20 @@ run_proc(pcb_t *pcb)
 			"g"(cs_segsel),
 			"g"(pcb->registers.rip),
 			"g"(pcb->registers.rbp)
-		:
+		:	"rax",
+			"rbx",
+			"rcx",
+			"rdx",
+			"rdi",
+			"rsi",
+			"r8",
+			"r9",
+			"r10",
+			"r11",
+			"r12",
+			"r13",
+			"r14",
+			"r15"
 	);
 }
 
