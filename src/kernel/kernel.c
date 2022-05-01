@@ -180,7 +180,7 @@ void print_key(KeyInfo *key_info)
 
 void _start(struct stivale2_struct *stivale2_struct) {
 	__asm__("cli");
-	initialize_gdt((uint64_t) &stack);
+	initialize_gdt((uint64_t) &stack + sizeof(stack));
 
 	struct stivale2_struct_tag_modules *mods;
 	mods = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MODULES_ID);
@@ -226,6 +226,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	if(initrd) {
 		fetch = ustar_read(initrd, "./userspace/fetch.elf");
 	}
+
+	__asm__("sti");
 
 	pcb_t fetch_pcb;
 	parse_elf((char*) fetch, &fetch_pcb);

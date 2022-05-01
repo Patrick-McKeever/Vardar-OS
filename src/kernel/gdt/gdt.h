@@ -90,7 +90,7 @@ typedef struct {
     uint32_t reserved3;
     uint32_t reserved4;
 
-    uint16_t IOBP;
+    uint32_t IOBP;
 } __attribute__((packed)) tss_t;
 
 

@@ -2,6 +2,7 @@
 #include "proc/proc.h"
 #include "memory_management/physical_memory_manager.h"
 #include "memory_management/virtual_memory_manager.h"
+#include "memory_management/kheap.h"
 #include "utils/string.h"
 #include "stivale2.h"
 
@@ -37,6 +38,7 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// mappings in the process-level pagemap. So, map 0x1000-4GiB to higher half,
 	// and map PMRs as specified.
 	MapKernelPmrs(pcb->pagemap);
+	map_heap(pcb->pagemap);
 
 	// Find entry point, set RIP equal to entry point.
 	pcb->registers.rip = header->entry_pt;

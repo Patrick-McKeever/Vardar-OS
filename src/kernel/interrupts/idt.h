@@ -24,6 +24,7 @@
 #define INTERRUPT_GATE			0x8E
 #define TRAP_GATE				0x8F
 #define TASK_GATE				0x85
+#define USER_MODE_INT			0b01100000
 
 
 // IDT entry.
@@ -55,6 +56,7 @@ typedef struct {
 extern void 	isr1();
 // ISR2 (timer) handler from asm file.
 extern void		isr2();
+extern void		isr80();
 
 // Loads the IDT referenced by given IDT descriptor as the IDT. 
 extern void 	LoadIdt(uint64_t idtr);

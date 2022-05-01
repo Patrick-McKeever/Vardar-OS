@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "interrupts/syscall.h"
 #include "keycodes.h"
 #include "utils/printf.h"
 #include "hal/io_apic.h"
@@ -15,6 +16,9 @@ void InitializeIdt()
 	SetIdtEntry(0x21, (void*) isr1, INTERRUPT_GATE);
 	// Timer input (IRQ 2).
 	SetIdtEntry(0x22, (void*) isr2, INTERRUPT_GATE);
+	// Syscall (IRQ 0x80).
+	SetIdtEntry(0x80, (void*) isr80, INTERRUPT_GATE | USER_MODE_INT);
+	register_syscall(1, &syscall_1);
 		
 	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
 	// hardware interrupts. This conflicts with IRQs, which occupy part of the
@@ -39,17 +43,6 @@ void InitializeIdt()
 	};
 	LoadIdt((uint64_t) &idt_desc);
 }
-
-void idt_mask_vector(uint8_t vector)
-{
-	
-}
-
-void idt_unmask_vector(uint8_t vector)
-{
-	
-}
-
 
 void SetIdtEntry(uint8_t vector, void *isr, uint8_t flags)
 {
@@ -159,4 +152,3 @@ void Isr2Handler()
 		timer_handler();
 	end_of_interrupt(false, 0x22);
 }
-

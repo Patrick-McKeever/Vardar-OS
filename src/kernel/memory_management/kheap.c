@@ -1,5 +1,6 @@
 #include "memory_management/kheap.h"
 #include "memory_management/physical_memory_manager.h"
+#include "memory_management/virtual_memory_manager.h"
 #include "utils/string.h"
 #include "utils/printf.h"
 
@@ -52,6 +53,7 @@ void init_heap(size_t heap_size)
 {
 	PrintK("Initializing heap.\n");
     HEAP_START = AllocContiguous(heap_size);
+	HEAP_START = (void*) ((uint64_t) HEAP_START) + KERNEL_DATA;
     HEAP_SIZE = heap_size;
     uint32_t *heap_header = (uint32_t*) HEAP_START;
     *heap_header = heap_size - MDATA_SIZE;
@@ -60,10 +62,26 @@ void init_heap(size_t heap_size)
 	PrintK("Heap initialized at 0x%h.\n", (uintptr_t) HEAP_START);
 }
 
+void map_heap(uint64_t *page_table_root)
+{
+	uint64_t heap_paddr = KernelVAddrToPAddr((uint64_t) HEAP_START);
+
+	// Round size of heap up to nearest multiple of 0x1000 (page size).
+	size_t num_heap_pages = (((HEAP_SIZE + (1 << LOG2_FRAME_SIZE) - 1) >> LOG2_FRAME_SIZE)
+							 << LOG2_FRAME_SIZE);
+	// Map heap w/ to vaddr offset fffff8... and kernel-level protections.
+	MapMultiple(page_table_root, heap_paddr, heap_paddr + num_heap_pages, KERNEL_DATA,
+				KERNEL_PAGE);
+}
+
+
 void *kalloc(size_t size)
 {
     void *heap_ptr = HEAP_START;
     uint32_t *heap_header = (uint32_t*) heap_ptr;
+	
+	//PrintK("\nHEAP PTR VIRTADDR IS: %h\n", (uintptr_t) heap_ptr);
+
     while(((uintptr_t) heap_ptr < (uintptr_t) HEAP_START + HEAP_SIZE) &&
           ((*heap_header & 1) || (*heap_header <= size)))
     {
