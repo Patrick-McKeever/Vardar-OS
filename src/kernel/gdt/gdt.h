@@ -23,8 +23,8 @@
 // bytes 3-15 of segment offset from GDT in bytes.
 #define KERN_CS_SEGSEL		0x28
 #define KERN_DS_SEGSEL		0x30
-#define USER_CS_SEGSEL		0x35
-#define USER_DS_SEGSEL		0x37
+#define USER_CS_SEGSEL		0x3B
+#define USER_DS_SEGSEL		0x43
 
 #include <stdint.h>
 #include <stddef.h>

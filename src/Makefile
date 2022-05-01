@@ -1,4 +1,4 @@
-C := ../crosstools/x86_64-elf-gcc
+CC := gcc
 AS := nasm
 LD := ../crosstools/x86_64-elf-ld
 

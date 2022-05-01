@@ -8,8 +8,8 @@ run_proc(pcb_t *pcb)
 	uint64_t ds_segsel = USER_DS_SEGSEL;
 	uint64_t cs_segsel = USER_CS_SEGSEL;
 	uint64_t pt_paddr = KernelVAddrToPAddr((uintptr_t) pcb->pagemap);
-	uint64_t inst_paddr = VAddrToPAddr((uint64_t*) pcb->pagemap, 0xffffffff80000b74);
-	PrintK("0xffffffff80000b74 maps to: 0x%h\n", inst_paddr);
+	uint64_t inst_paddr = VAddrToPAddr((uint64_t*) pcb->pagemap, pcb->registers.rip);
+	PrintK("Entry pt maps to: 0x%h\n", inst_paddr);
 	asm volatile("mov %0, %%cr3" :: "r"(pt_paddr) :);
 
 	asm volatile(
@@ -51,7 +51,6 @@ run_proc(pcb_t *pcb)
 			"push %16\n\t"
 			/* RIP */
 			"push %17\n\t"
-			"xor %%rax, %%rax\n"
 			"mov %18, %%rbp\n\t"
 			"iretq\n\t"
 		:

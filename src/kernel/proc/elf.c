@@ -36,14 +36,10 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// can't just throw out things like the GDT, IDT, etc.) Here, we create those
 	// mappings in the process-level pagemap. So, map 0x1000-4GiB to higher half,
 	// and map PMRs as specified.
-	uint64_t four_gb = 0x100000000;
 	MapKernelPmrs(pcb->pagemap);
 
-	uint64_t paddr = VAddrToPAddr(pcb->pagemap, 0xffffffff80000ba9);
-	PrintK("Inst paddr listed as 0x%h, vaddr 0x%h\n", paddr, 0xffffffff80000ba9);
-
 	// Find entry point, set RIP equal to entry point.
-	uint64_t entry_pt = header->entry_pt;
+	pcb->registers.rip = header->entry_pt;
 
 	// For each of the program segments, create relevant user level pages in the
 	// process page table.
@@ -53,13 +49,6 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 			uint8_t *segment = (raw_elf + phdrs[i].offset);
 			size_t seg_base = phdrs[i].vaddr;
 			size_t seg_bound = seg_base + phdrs[i].mem_size;
-
-			// Calculate the virtual address of the entry point. This will just be
-			// the virtual address of this segment plus the offset of the entry point
-			// from the start of this segment. Set proc's rip equal to this value.
-			if(entry_pt >= seg_base && entry_pt <= seg_bound) {
-				pcb->registers.rip = phdrs[i].vaddr + (entry_pt - phdrs[i].offset);
-			}
 
 			// Round up bound to a power of 0x1000.
 			seg_bound = (((seg_bound + (1 << LOG2_FRAME_SIZE) - 1) >> LOG2_FRAME_SIZE) 
@@ -80,11 +69,6 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	MapPage(pcb->pagemap, DEFAULT_STACK_BASE, (uintptr_t) stack, USER_PROC_PAGE);
 	pcb->registers.rbp = DEFAULT_STACK_BASE;
 	pcb->registers.rsp = DEFAULT_STACK_BASE;
-
-	paddr = VAddrToPAddr(pcb->pagemap, DEFAULT_STACK_BASE);
-	//asm volatile("mov %0, %%cr3" ::"r"((uintptr_t) &pcb->pagemap):);
-	PrintK("Stack paddr listed as 0x%h, should be 0x%h\n", paddr, (uintptr_t) stack);
-
 
 	// As of now, we are not attempting to parse section headers. However, this will
 	// become relevant when we attempt to make a dynamic linker.
