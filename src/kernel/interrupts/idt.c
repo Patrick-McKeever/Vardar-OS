@@ -18,7 +18,10 @@ void InitializeIdt()
 	SetIdtEntry(0x22, (void*) isr2, INTERRUPT_GATE);
 	// Syscall (IRQ 0x80).
 	SetIdtEntry(0x80, (void*) isr80, INTERRUPT_GATE | USER_MODE_INT);
-	register_syscall(1, &syscall_1);
+
+	// Register print/exit syscalls.
+	register_syscall(0x01, &syscall_1);
+	register_syscall(0x3c, &syscall_3c);
 		
 	// Due to historical quirks, IBM already maps ISRs [0x0,0x1F] to various
 	// hardware interrupts. This conflicts with IRQs, which occupy part of the

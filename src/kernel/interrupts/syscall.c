@@ -22,3 +22,8 @@ void syscall_1(const registers_t *const regs)
 {
 	return;
 }
+
+void syscall_3c(const registers_t *const regs)
+{
+	return;
+}

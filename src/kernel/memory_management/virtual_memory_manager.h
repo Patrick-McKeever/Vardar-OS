@@ -21,9 +21,10 @@
 #define DIRTY						(1 << 6)	
 #define PAGE_ATTRIBUTE_TABLE		(1 << 7)	
 #define GLOBAL						(1 << 8)	
+#define EXECUTABLE					(~(1 << 62))
 
-#define KERNEL_PAGE					PRESENT | READ_WRITABLE
-#define USER_PAGE					PRESENT | READ_WRITABLE | USER_ACCESSIBLE
+#define KERNEL_PAGE					(PRESENT | READ_WRITABLE)
+#define USER_PAGE					(PRESENT | READ_WRITABLE | USER_ACCESSIBLE)
 
 // 512 entries per table, of 4KiB pages each.
 #define LOG2_ENTRIES_PER_TABLE		9

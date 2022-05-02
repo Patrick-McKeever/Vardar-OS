@@ -37,8 +37,6 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// can't just throw out things like the GDT, IDT, etc.) Here, we create those
 	// mappings in the process-level pagemap. So, map 0x1000-4GiB to higher half,
 	// and map PMRs as specified.
-	MapKernelPmrs(pcb->pagemap);
-	map_heap(pcb->pagemap);
 
 	// Find entry point, set RIP equal to entry point.
 	pcb->registers.rip = header->entry_pt;
@@ -69,8 +67,12 @@ parse_elf(uint8_t *raw_elf, pcb_t *pcb)
 	// Create stack, map it, and set processor RSP/RBP equal to top of stack.
 	void *stack = AllocFirstFrame();
 	MapPage(pcb->pagemap, DEFAULT_STACK_BASE, (uintptr_t) stack, USER_PROC_PAGE);
-	pcb->registers.rbp = DEFAULT_STACK_BASE;
-	pcb->registers.rsp = DEFAULT_STACK_BASE;
+
+	MapKernelPmrs(pcb->pagemap);
+	map_heap(pcb->pagemap);
+
+	pcb->registers.rbp = DEFAULT_STACK_BASE /*0xE0000000 + 0xFFF*/;
+	pcb->registers.rsp = DEFAULT_STACK_BASE /*0xE0000000 + 0xFFF*/;
 
 	// As of now, we are not attempting to parse section headers. However, this will
 	// become relevant when we attempt to make a dynamic linker.

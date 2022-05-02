@@ -67,12 +67,18 @@ bool MapKernelPmrs(uint64_t *page_table_root)
 		uint64_t base = MMAP->memmap[i].base;
 		uint64_t bound = base + MMAP->memmap[i].length;
 
+		if(MMAP->memmap[i].type == STIVALE2_MMAP_FRAMEBUFFER ||
+			MMAP->memmap[i].type == STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE) 
+		{
+			MapMultiple(page_table_root, base, bound, 0, KERNEL_PAGE & EXECUTABLE);
+		}
+
 		// If we already mapped this, continue.
 		if(bound <= 0x100000000)
 			continue;	
-		
-		success &= MapMultipleKernel(base, bound, 0, KERNEL_PAGE);
-		success &= MapMultipleKernel(base, bound, KERNEL_DATA, KERNEL_PAGE);
+
+		success &= MapMultiple(page_table_root, base, bound, 0, KERNEL_PAGE);
+		success &= MapMultiple(page_table_root, base, bound, KERNEL_DATA, KERNEL_PAGE);
 	}
 
 	return success;
@@ -126,8 +132,6 @@ bool MapPage(uint64_t *page_table_root, uint64_t vaddr, uint64_t paddr,
 bool MapMultiple(uint64_t *page_table_root, uint64_t base, uint64_t bound,
 				 uint64_t offset, uint16_t flags)
 {
-	PrintK("MapMultiple: Mapping %h-%h w/ to %h-%h\n\0", 
-			base, bound, base + offset, bound + offset);
 	for(uint64_t addr = base; addr < bound; addr += FRAME_SIZE) {
 		uint64_t vaddr = addr + offset;	
 		bool success = MapPage(page_table_root, vaddr, addr, flags);

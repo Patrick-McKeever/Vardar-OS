@@ -1,5 +1,5 @@
 #ifndef SYSCALL_H
-#define SYSCLAL_H
+#define SYSCALL_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -37,6 +37,8 @@ void Isr80Handler(const registers_t *const regs, const control_registers_t *cons
 
 void register_syscall(uint64_t rax, syscall_handler_t handler);
 
+
 void syscall_1(const registers_t *const regs);
+void syscall_3c(const registers_t *const regs);
 
 #endif
