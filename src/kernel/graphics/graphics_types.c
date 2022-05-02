@@ -1,7 +1,10 @@
 #include "graphics_types.h"
+#include "memory_management/virtual_memory_manager.h"
 
 uint32_t PackRgb(RGB rgb, struct stivale2_struct_tag_framebuffer *fb)
 {
+	//if((uintptr_t) fb > KERNEL_DATA)
+	//	fb = ((void*) fb - KERNEL_DATA);
 	// This function assumes 32 bpp with packed pixels (memory model of 0x04).
 	if(fb->framebuffer_bpp != 32/* || fb->memory_model != 0x04*/) {
 		return 0;

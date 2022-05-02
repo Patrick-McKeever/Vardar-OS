@@ -161,10 +161,12 @@ static Font *global_font;
 #include "utils/printf.h"
 #include "acpi/acpi.h"
 #include "hal/cpu_init.h"
+#include "hal/lapic.h"
 #include "hal/io_apic.h"
 #include "memory_management/kheap.h"
 #include "gdt/gdt.h"
 #include "vfs/ustar.h"
+#include "proc/sched.h"
 #include "proc/elf.h"
 Terminal term;
 
@@ -180,7 +182,6 @@ void print_key(KeyInfo *key_info)
 
 void _start(struct stivale2_struct *stivale2_struct) {
 	__asm__("cli");
-	initialize_gdt((uint64_t) &stack + sizeof(stack));
 
 	struct stivale2_struct_tag_modules *mods;
 	mods = stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MODULES_ID);
@@ -221,6 +222,12 @@ void _start(struct stivale2_struct *stivale2_struct) {
 
 	// Initialize heap.
 	init_heap(0x20000);
+	enable_lapic();
+	initialize_gdt((uint64_t) &stack + sizeof(stack));
+	unmask_irq(0x2);
+	startup_aps(smp_info);
+	mask_irq(0x2);
+	
 	void *initrd = ustar_from_module(mods, "boot:///initrd.ustar");
 	char *fetch;
 	if(initrd) {
@@ -231,13 +238,8 @@ void _start(struct stivale2_struct *stivale2_struct) {
 
 	pcb_t fetch_pcb;
 	parse_elf((char*) fetch, &fetch_pcb);
-	run_proc(&fetch_pcb);
 
-	unmask_irq(0x1);
-	unmask_irq(0x2);
-	startup_aps(smp_info);
-	
-	PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
+	//PrintK("BSP Lapic ID is 0x%h\n", smp_info->bsp_lapic_id);
 	//void *a = kalloc(20);
 
 	// This works, but keyboard input breaks.
@@ -247,13 +249,31 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	
 	font_obj.rgb = (RGB) {255, 0, 0};
 	ClearScreen((RGB) {0, 0, 0});
-	term = InitTerminal((Dimensions){ fb->framebuffer_width, fb->framebuffer_height/2}, (Coordinate) {0,0},
-					 &font_obj, (RGB) {15,90,94}, (RGB){255,255,255}, 3, "VardarOS:~$ ");
+	term = InitTerminal(
+			(Dimensions){ 
+				fb->framebuffer_width, 
+				fb->framebuffer_height/2
+			}, (Coordinate) {
+				0,
+				0
+			}, &font_obj, 
+			(RGB) {
+				15,
+				90,
+				94
+			},  (RGB){
+				255,
+				255,
+				255
+			}, 3, "VardarOS:~$ ");
 	
 	WriteBack();
 	
+	unmask_irq(0x1);
 	SetKeystrokeConsumer(&HandleKeyStroke);
-	//SetKeystrokeConsumer(&print_key);
+	// This bit is run in the final report.
+	//run_proc(&fetch_pcb);
+
 	__asm__("sti");
 
     for (;;) {

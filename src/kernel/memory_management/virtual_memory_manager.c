@@ -46,6 +46,9 @@ bool MapKernelPmrs(uint64_t *page_table_root)
 	bool success = true;
 	uint64_t kern_phys_base = BASE_ADDR->physical_base_address;
 	uint64_t kern_virt_base = BASE_ADDR->virtual_base_address;
+
+	uint64_t four_gb = 0x100000000;
+	MapMultiple(page_table_root, 0x1000, four_gb, KERNEL_DATA, KERNEL_PAGE);
 	
 	// Protected memory ranges (PMRs) describe ELF segments of kernel code,
 	// giving their location in physical/virtual memory as determined by the
@@ -73,6 +76,10 @@ bool MapKernelPmrs(uint64_t *page_table_root)
 			MapMultiple(page_table_root, base, bound, 0, KERNEL_PAGE & EXECUTABLE);
 		}
 
+		if(MMAP->memmap[i].type == STIVALE2_MMAP_FRAMEBUFFER) {
+			MapMultiple(page_table_root, base, bound, KERNEL_DATA, KERNEL_PAGE & EXECUTABLE);
+		}
+
 		// If we already mapped this, continue.
 		if(bound <= 0x100000000)
 			continue;	
@@ -80,6 +87,7 @@ bool MapKernelPmrs(uint64_t *page_table_root)
 		success &= MapMultiple(page_table_root, base, bound, 0, KERNEL_PAGE);
 		success &= MapMultiple(page_table_root, base, bound, KERNEL_DATA, KERNEL_PAGE);
 	}
+
 
 	return success;
 }

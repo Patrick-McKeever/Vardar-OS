@@ -1,10 +1,13 @@
 #include "gdt/gdt.h"
+#include "hal/lapic.h"
 #include "utils/string.h"
+#include "utils/spin_lock.h"
 
 extern void load_gdt(uint64_t gdtr);
+static spin_lock_t LTR_LOCK;
 static gdt_t GDT;
 static gdt_descriptor_t GDT_DESC; 
-static tss_t TSS;
+static tss_t TSS[256];
 
 void set_tss_entry(uint64_t base, uint8_t flags, uint8_t access)
 {
@@ -20,16 +23,21 @@ void set_tss_entry(uint64_t base, uint8_t flags, uint8_t access)
 
 void init_tss(uint64_t stack)
 {
-    set_tss_entry((uintptr_t)&TSS, 0x20, 0x89);
-    memset((void *)&TSS, 0, sizeof(tss_t));
+	uint8_t lapic_id = get_lapic_id();
+	wait(&LTR_LOCK);
+    set_tss_entry((uintptr_t)&TSS[lapic_id], 0x20, 0x89);
+    memset((void *)&TSS[lapic_id], 0, sizeof(tss_t));
 
-    TSS.RSP0 = stack;
-    TSS.IST1 = 0; // Disable IST
+    TSS[lapic_id].RSP0 = stack;
+    TSS[lapic_id].IST1 = 0; // Disable IST
+	release(&LTR_LOCK);
 }
 
-static inline void load_tss(uint16_t tss_selector)
+void load_tss(uint16_t tss_selector)
 {
+	wait(&LTR_LOCK);
     asm volatile("ltr %%ax" :: "a"(tss_selector) : "memory");
+	release(&LTR_LOCK);
 }
 
 void

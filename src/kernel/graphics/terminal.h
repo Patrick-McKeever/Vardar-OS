@@ -21,6 +21,8 @@ Terminal InitTerminal(Dimensions dims,
 					  char *prompt);
 
 void TermPrint(Terminal *term, const char *str);
+void TermPrintMain(const char *str);
+void RenderMain();
 
 void Render(Terminal *term);
 

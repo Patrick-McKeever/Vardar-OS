@@ -107,4 +107,8 @@ typedef struct {
 void
 initialize_gdt();
 
+void init_tss(uint64_t stack);
+void load_tss(uint16_t tss_selector);
+
+
 #endif

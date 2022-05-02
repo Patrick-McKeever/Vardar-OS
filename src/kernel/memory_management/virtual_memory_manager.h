@@ -21,7 +21,7 @@
 #define DIRTY						(1 << 6)	
 #define PAGE_ATTRIBUTE_TABLE		(1 << 7)	
 #define GLOBAL						(1 << 8)	
-#define EXECUTABLE					(~(1 << 62))
+#define EXECUTABLE					(~(1UL << 62))
 
 #define KERNEL_PAGE					(PRESENT | READ_WRITABLE)
 #define USER_PAGE					(PRESENT | READ_WRITABLE | USER_ACCESSIBLE)

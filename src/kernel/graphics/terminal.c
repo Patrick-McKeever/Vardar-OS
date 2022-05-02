@@ -49,6 +49,16 @@ void TermPrint(Terminal *term, const char *str)
 	}
 }
 
+void TermPrintMain(const char *str)
+{
+	TermPrint(&main_term, str);
+}
+
+void RenderMain()
+{
+	Render(&main_term);
+}
+
 void Render(Terminal *term)
 {
 	// Draw terminal body, parts of which will be overwrriten by borders.
